@@ -299,6 +299,13 @@ initGameState O = GameState { nextPlayer = Computer
                             , gameBoard = blankBoard
                             }
 
+-- |Use this function to make a move and get back a new GameState in which the
+-- |computer has already made its next move.
+doMove :: GameState -> Cell -> Either String GameState
+doMove gs cell =
+  let go = doHumanMove cell >> doComputerMove
+   in execStateT go gs
+
 {-|
   Return a StateT that will either play the correct Mark value into the given
   Cell, or will return a error message.
