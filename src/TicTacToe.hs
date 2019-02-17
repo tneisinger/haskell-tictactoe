@@ -299,21 +299,14 @@ initGameState O = GameState { nextPlayer = Computer
                             , gameBoard = blankBoard
                             }
 
--- |Use this function to make a move and get back a new GameState in which the
--- |computer has already made its next move.
-doMove :: GameState -> Cell -> Either String GameState
-doMove gs cell =
-  let go = doHumanMove cell >> doComputerMove
-   in execStateT go gs
-
 {-|
   Return a StateT that will either play the correct Mark value into the given
   Cell, or will return a error message.
 -}
 doHumanMove :: Cell -> StateT GameState (Either String) ()
 doHumanMove cell = do
-  gameState <- get
-  case nextPlayer gameState of
+  gs <- get
+  case nextPlayer gs of
     Computer -> lift $ Left "It is not the human's turn."
     Human -> performMove cell
 
@@ -338,12 +331,15 @@ doComputerMove = do
 performMove :: Cell -> StateT GameState (Either String) ()
 performMove cell = do
   gs <- get
-  let player = nextPlayer gs
-      mark = if player == Computer then (computerMark gs) else (humanMark gs)
-  case fillCell cell mark (gameBoard gs) of
-    Left errMsg    -> lift $ Left errMsg
-    Right newBoard -> put gs { nextPlayer = flipPlayer player
-                             , gameBoard = newBoard }
+  case checkGSForOutcome gs of
+    Just outcome -> lift $ Left $ "Cannot move; game over: " ++ show outcome
+    Nothing -> do
+      let np = nextPlayer gs
+          mark = if np == Computer then (computerMark gs) else (humanMark gs)
+      case fillCell cell mark (gameBoard gs) of
+        Left errMsg    -> lift $ Left errMsg
+        Right newBoard -> put gs { nextPlayer = flipPlayer np
+                                 , gameBoard = newBoard }
 
 -- |Print the GameState to the screen in a convenient way.
 printGameState :: GameState -> IO ()
