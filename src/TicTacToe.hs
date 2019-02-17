@@ -257,6 +257,11 @@ checkLineForWinner board line =
     (Just O, Just O, Just O) -> Just O
     _                        -> Nothing
 
+-- |Get a list of the lines that contain three Xs or three Os.
+getWinningLines :: Board -> [Line]
+getWinningLines board =
+  filter (isJust . checkLineForWinner board) [Line00to02 ..]
+
 {-|
   Ask the human which Mark they would like to play as.  The human's response
   will determine if the human or the computer will move first, since X always
