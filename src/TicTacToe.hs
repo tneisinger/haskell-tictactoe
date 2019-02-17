@@ -180,6 +180,10 @@ showCellContents :: Maybe Mark -> String
 showCellContents Nothing = " "
 showCellContents (Just m) = show m
 
+-- |Convenience function for displaying the contents of a cell of the board
+showCell :: Board -> Cell -> String
+showCell board cell = showCellContents $ Map.lookup cell board
+
 -- |Return the String representation of a horizontal line of the Board
 showLine :: Board -> Line -> String
 showLine board line =
