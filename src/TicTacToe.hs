@@ -65,15 +65,42 @@ line2Cells Line02to22 = (Cell02, Cell12, Cell22)
 line2Cells Line00to22 = (Cell00, Cell11, Cell22)
 line2Cells Line20to02 = (Cell20, Cell11, Cell02)
 
+{-| A data type that is returned when a move cannot be completed.
+Typically, this will be an 'InvalidMoveError Player' or an
+'InvalidMoveError Mark'.
+-}
+data InvalidMoveError a = CellFull Cell Mark
+                        | GameOver (GameOutcome a)
+                        | NotTurnOf a
+                        | UnknownMoveErr Board String
+                        deriving (Show)
+
+{-| Using a GameState, convert an 'InvalidMoveError Mark' into an
+'InvalidMoveError Player'
+-}
+promoteMoveError :: GameState
+                 -> InvalidMoveError Mark
+                 -> InvalidMoveError Player
+promoteMoveError _ (CellFull c m) = CellFull c m
+promoteMoveError _ (GameOver Draw) = GameOver Draw
+promoteMoveError _ (UnknownMoveErr b msg) = UnknownMoveErr b msg
+promoteMoveError gs (NotTurnOf mark) = NotTurnOf $ getPlayer gs mark
+promoteMoveError gs (GameOver (Winner mark)) =
+  GameOver $ Winner $ getPlayer gs mark
+
+-- | Get the player that is playing as the given mark.
+getPlayer :: GameState -> Mark -> Player
+getPlayer gs mark = if computerMark gs == mark then Computer else Human
+
 {-|
   Either return a new Board with the given Mark added to the given Cell, or
   return an error string if the Board already has a Mark in that Cell.
 -}
-fillCell :: Cell -> Mark -> Board -> Either String Board
+fillCell :: Cell -> Mark -> Board -> Either (InvalidMoveError Mark) Board
 fillCell cell mark board =
   case Map.lookup cell board of
     Nothing -> Right $ Map.insert cell mark board
-    Just m  -> Left $ show cell ++ " already contains " ++ show m
+    Just m  -> Left $ CellFull cell m
 
 -- |Get the list of Cells corresponding to the cells that are currently empty
 emptyCells :: Board -> [Cell]
@@ -148,17 +175,32 @@ scoreEmptyCells :: Mark -> Board -> [(Cell, Int)]
 scoreEmptyCells myMark board =
   map (\cID -> (cID, scoreCell myMark board cID)) $ emptyCells board
 
-{-|
-  Either return the Cell to play into next, or an error message. The first
-  Mark argument given to this function determines which Mark (X or O) that the
-  AI will think of as "his."
+{-| Either return the Cell to play into next, or an 'InvalidMoveError Mark'.
+The first Mark argument given to this function determines which Mark (X or O)
+the AI will think of as "hers."
 -}
-selectNextMove :: Mark -> Board -> Either String Cell
+selectNextMove :: Mark -> Board -> Either (InvalidMoveError Mark) Cell
 selectNextMove myMark board =
-  let emptyCellScores = scoreEmptyCells myMark board
-   in case headMay $ reverse $ sortBy (compare `on` snd) emptyCellScores of
-        Nothing       -> Left "There are no moves left to make."
-        Just (cID, _) -> Right cID
+    case headMay $ reverse $ sortBy (compare `on` snd) emptyCellScores of
+      Just (cID, _) -> Right cID
+      Nothing       -> Left $ getOutcomeMoveError board errMsg
+  where emptyCellScores = scoreEmptyCells myMark board
+        errMsg = concat [ "The selectNextMove function found no empty "
+                        , "cells, but the checkForOutcome function did "
+                        , "not return an outcome."
+                        ]
+
+{-| Given a board that has an outcome, return an informative InvalidMoveError.
+This function assumes that the given board has an outcome (win or draw).  An
+UnknownMoveErr will be returned if this function is called on a board that
+doesn't have an outcome. This function should only be used in situations where
+you know that the board does in fact have an outcome.
+-}
+getOutcomeMoveError :: Board -> String -> InvalidMoveError Mark
+getOutcomeMoveError board errMsg =
+  case checkForOutcome board of
+    Just outcome -> GameOver outcome
+    Nothing      -> UnknownMoveErr board errMsg
 
 -- |Return a String representation of a Board
 showBoard :: Board -> String
@@ -306,43 +348,43 @@ initGameState O = GameState { nextPlayer = Computer
 
 {-|
   Return a StateT that will either play the correct Mark value into the given
-  Cell, or will return a error message.
+  Cell, or will return an 'InvalidMoveError Player'.
 -}
-doHumanMove :: Cell -> StateT GameState (Either String) ()
+doHumanMove :: Cell -> StateT GameState (Either (InvalidMoveError Player)) ()
 doHumanMove cell = do
   gs <- get
   case nextPlayer gs of
-    Computer -> lift $ Left "It is not the human's turn."
+    Computer -> lift $ Left (NotTurnOf Human)
     Human -> performMove cell
 
 {-|
   Return a StateT that will either play the correct Mark (X or O) into the Cell
-  chosen by the computer, or return an error message.
+  chosen by the computer, or return an 'InvalidMoveError Player'
 -}
-doComputerMove :: StateT GameState (Either String) ()
+doComputerMove :: StateT GameState (Either (InvalidMoveError Player)) ()
 doComputerMove = do
-  gameState <- get
-  case nextPlayer gameState of
-    Human -> lift $ Left "It is not the computer's turn."
+  gs <- get
+  case nextPlayer gs of
+    Human -> lift $ Left (NotTurnOf Computer)
     Computer -> do
-      case selectNextMove (computerMark gameState) (gameBoard gameState) of
-        Left errMsg -> lift $ Left $ "Cannot execute computer move: " ++ errMsg
+      case selectNextMove (computerMark gs) (gameBoard gs) of
+        Left err -> lift $ Left $ promoteMoveError gs err
         Right cell -> performMove cell
 
 {-|
   Return a StateT that will either play the correct Mark (X or O) into the
   given Cell, or will return an error message.
 -}
-performMove :: Cell -> StateT GameState (Either String) ()
+performMove :: Cell -> StateT GameState (Either (InvalidMoveError Player)) ()
 performMove cell = do
   gs <- get
   case checkGSForOutcome gs of
-    Just outcome -> lift $ Left $ "Cannot move; game over: " ++ show outcome
+    Just outcome -> lift $ Left (GameOver outcome)
     Nothing -> do
       let np = nextPlayer gs
           mark = if np == Computer then (computerMark gs) else (humanMark gs)
       case fillCell cell mark (gameBoard gs) of
-        Left errMsg    -> lift $ Left errMsg
+        Left err -> lift $ Left $ promoteMoveError gs err
         Right newBoard -> put gs { nextPlayer = flipPlayer np
                                  , gameBoard = newBoard }
 
@@ -369,12 +411,12 @@ textGameLoop gs = do
     (Just Draw, _)              -> return ()
     (Nothing, Computer)         -> do
       case execStateT doComputerMove gs of
-        Left errMsg -> putStrLn errMsg
+        Left err -> putStrLn $ show err
         Right newGS -> textGameLoop newGS
     (Nothing, Human)            -> do
       cell <- askWhichCell (gameBoard gs)
       case execStateT (doHumanMove cell) gs of
-        Left errMsg -> putStrLn errMsg
+        Left err -> putStrLn $ show err
         Right newGS -> textGameLoop newGS
 
 -- |Entrypoint for running the text version of this game.
