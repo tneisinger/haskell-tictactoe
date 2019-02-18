@@ -90,13 +90,29 @@ getPlayer :: GameState -> Mark -> Player
 getPlayer gs mark = if computerMark gs == mark then Computer else Human
 
 {-| Either return a new Board with the given Mark added to the given Cell, or
-return an error string if the Board already has a Mark in that Cell.
+return an InvalidMoveError.  An InvalidMoveError will be returned if the cell
+to be filled already contains a Mark, or if it isn't the turn of the given
+Mark (based on a comparison of the number of Xs and Os already on the board).
 -}
 fillCell :: Cell -> Mark -> Board -> Either (InvalidMoveError Mark) Board
 fillCell cell mark board =
-  case Map.lookup cell board of
-    Nothing -> Right $ Map.insert cell mark board
-    Just m  -> Left $ CellFull cell m
+  case (isNextTurn board mark, Map.lookup cell board) of
+    (False, _)   -> Left $ NotTurnOf mark
+    (_, Just m)  -> Left $ CellFull cell m
+    (_, Nothing) -> Right $ Map.insert cell mark board
+
+-- | Return the number of Xs and Os on a board
+countMarks :: Board -> (Int, Int)
+countMarks board = foldr go (0,0) $ Map.elems board
+  where go mark (numXs, numOs) = if mark == X
+                              then (numXs + 1, numOs)
+                              else (numXs, numOs + 1)
+
+-- | Determine if the given Mark should get the next move on the board
+isNextTurn :: Board -> Mark -> Bool
+isNextTurn board mark = if numMoreXs > 0 then mark == O else mark == X
+  where (numXs, numOs) = countMarks board
+        numMoreXs = numXs - numOs
 
 -- | Get the list of Cells corresponding to the cells that are currently empty
 emptyCells :: Board -> [Cell]
