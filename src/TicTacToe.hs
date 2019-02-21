@@ -3,12 +3,16 @@
 module TicTacToe where
 
 import Control.Monad.State
+import Control.Monad.Except
+import Data.Tree
 import Data.Char (toUpper)
 import Data.Function (on)
-import Safe (headMay)
-import Data.Maybe (maybeToList, isJust)
-import Data.List (sortBy, sort)
+import Data.Maybe (isJust, fromMaybe)
+import Data.List (sort, maximumBy)
 import Data.Map (Map)
+import Numeric.MathFunctions.Comparison (eqRelErr)
+import Data.Random (randomElement, runRVar)
+import Data.Random.Source.DevRandom (DevRandom(DevURandom))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 
@@ -63,21 +67,43 @@ line2Cells Line00to22 = (Cell00, Cell11, Cell22)
 line2Cells Line20to02 = (Cell20, Cell11, Cell02)
 
 {-| A data type that is returned when a move cannot be completed.
-Typically, this will be an 'InvalidMoveError Player' or an
-'InvalidMoveError Mark'.
+Typically, this will be an 'MoveError Player' or an
+'MoveError Mark'.
 -}
-data InvalidMoveError a = CellFull Cell Mark
+data MoveError a = CellFull Cell Mark
                         | GameOver (GameOutcome a)
                         | NotTurnOf a
                         | UnknownMoveErr Board String
-                        deriving (Show)
 
-{-| Using a GameState, convert an 'InvalidMoveError Mark' into an
-'InvalidMoveError Player'
+showMoveErrorPrefix :: String
+showMoveErrorPrefix = "MoveError: "
+
+instance Show a => Show (MoveError a) where
+  show (GameOver outcome) =
+    concat [ showMoveErrorPrefix
+           , "No other moves can be made because the game is over.\n"
+           , "Game outcome: " ++ show outcome
+           ]
+  show (NotTurnOf p) =
+    concat [ showMoveErrorPrefix
+           , show p ++ " tried to put a mark on the board when it was not "
+           , show p ++ "'s turn."
+           ]
+  show (UnknownMoveErr board msg) =
+    concat [ showMoveErrorPrefix
+           , "An unknown MoveError occurred.\n"
+           , "Error Message: " ++ msg ++ "\n"
+           , "At the time of the error, the board was:\n\n"
+           , showBoard board
+           , "\n\n"
+           ]
+
+{-| Using a GameState, convert an 'MoveError Mark' into an
+'MoveError Player'
 -}
 promoteMoveError :: GameState
-                 -> InvalidMoveError Mark
-                 -> InvalidMoveError Player
+                 -> MoveError Mark
+                 -> MoveError Player
 promoteMoveError _ (CellFull c m) = CellFull c m
 promoteMoveError _ (GameOver Draw) = GameOver Draw
 promoteMoveError _ (UnknownMoveErr b msg) = UnknownMoveErr b msg
@@ -90,11 +116,11 @@ getPlayer :: GameState -> Mark -> Player
 getPlayer gs mark = if computerMark gs == mark then Computer else Human
 
 {-| Either return a new Board with the given Mark added to the given Cell, or
-return an InvalidMoveError.  An InvalidMoveError will be returned if the cell
+return an MoveError.  An MoveError will be returned if the cell
 to be filled already contains a Mark, or if it isn't the turn of the given
 Mark (based on a comparison of the number of Xs and Os already on the board).
 -}
-fillCell :: Cell -> Mark -> Board -> Either (InvalidMoveError Mark) Board
+fillCell :: Cell -> Mark -> Board -> Either (MoveError Mark) Board
 fillCell cell mark board =
   case (isNextTurn board mark, Map.lookup cell board) of
     (False, _)   -> Left $ NotTurnOf mark
@@ -113,6 +139,265 @@ isNextTurn :: Board -> Mark -> Bool
 isNextTurn board mark = if numMoreXs > 0 then mark == O else mark == X
   where (numXs, numOs) = countMarks board
         numMoreXs = numXs - numOs
+
+-- ========================================================================= --
+--                                     AI                                    --
+-- ========================================================================= --
+
+{-| The highest-level monad of this project.
+
+IO is used to randomly pick from the best available moves when it is the
+Computer's turn to play.  State is used to handle the tic-tac-toe GameState.
+ExceptT is used to return a MoveError if one occurs.
+-}
+type TicTacToeIO a = StateT GameState (ExceptT (MoveError Player) IO) a
+
+{-| Run a TicTacToeIO operation against a GameState and get back the result of
+that operation.
+-}
+evalTicTacToeIO :: TicTacToeIO a
+               -> GameState
+               -> IO (Either (MoveError Player) a)
+evalTicTacToeIO tttIO = runExceptT . evalStateT tttIO
+
+{-| Run a TicTacToeIO operation against a GameState and get the resulting
+GameState as the return value.
+-}
+execTicTacToeIO :: TicTacToeIO a
+              -> GameState
+              -> IO (Either (MoveError Player) GameState)
+execTicTacToeIO tttIO = runExceptT . execStateT tttIO
+
+{-| As the names suggest, this monad is similar to the TicTacToeIO monad, but
+without IO.
+
+State is used to handle the tic-tac-toe GameState.  Either is used to return
+a MoveError if one occurs.
+-}
+type TicTacToe a = StateT GameState (Either (MoveError Player)) a
+
+-- | Turn a TicTacToe operation into a TicTacToeIO operation.
+liftTicTacToe :: TicTacToe a -> TicTacToeIO a
+liftTicTacToe f = do
+  gs <- get
+  case runStateT f gs of
+    Left err -> lift $ throwError err
+    Right (a, gs') -> put gs' >> pure a
+
+{-| Randomly select from the best moves available, and make that move.
+
+This function will throw a MoveError if it is not the Computer's turn to play.
+-}
+doComputerMove :: TicTacToeIO ()
+doComputerMove = do
+  gs <- get
+  case nextPlayer gs of
+    Human -> lift $ throwError (NotTurnOf Computer)
+    Computer -> do
+      cell <- lift $ getRandomBestCell gs
+      liftTicTacToe $ performMove cell
+
+{-| Return a random cell from among the cells that would be the most
+strategically wise to play into.  This function will throw a MoveError
+if it is not the Computer's turn to play.
+-}
+getRandomBestCell :: GameState -> ExceptT (MoveError Player) IO Cell
+getRandomBestCell gs =
+  case getBestCellsEarlyGame gs of
+    [] -> getRandomBest gs
+    cells  -> lift $ getRandomElem cells
+
+-- | Return a random element from list, using /dev/urandom
+getRandomElem :: [a] -> IO a
+getRandomElem xs = runRVar (randomElement xs) DevURandom
+
+{-| Randomly select a Cell from among the Cells that it would be most
+strategically wise to play into, based on the given GameState.
+
+The is the top-level function used to calculate the best Cell for the
+Computer to play into.
+
+Note: If this function is called on a GameState in which it is currently,
+the Human's turn, this function will return a WORST move for the human,
+which would in fact be a best move for the Computer.
+TODO: Fix this ^
+-}
+getRandomBest :: GameState -> ExceptT (MoveError Player) IO Cell
+getRandomBest gs =
+  case getBestCellChoices gs of
+    Left moveError -> throwError moveError
+    Right bestCells -> liftIO $ getRandomElem bestCells
+
+{-| Instead of calculating the best Cells to play into on the first
+or second turn, this function just memoizes the best cells to play
+into based on the given GameState.  If the given GameState is for a
+game that has more than two marks on the board, return an empty list.
+
+Effectively, this is used as memoization for the expensive calculation of
+finding the best moves to play in the early stages of a tic tac toe game.
+
+In the case where no moves are returned by this function, you should calculate
+the best moves instead.
+-}
+getBestCellsEarlyGame :: GameState -> [Cell]
+getBestCellsEarlyGame gs =
+  case (nextPlayer gs, Map.keys (gameBoard gs)) of
+    (Computer, [])       -> [Cell00, Cell02, Cell20, Cell22]
+    (Computer, [Cell00]) -> [Cell22]
+    (Computer, [Cell02]) -> [Cell20]
+    (Computer, [Cell20]) -> [Cell02]
+    (Computer, [Cell22]) -> [Cell00]
+    (Computer, [Cell11]) -> [Cell00, Cell02, Cell20, Cell22]
+    (Computer, [Cell01]) -> [Cell11]
+    (Computer, [Cell10]) -> [Cell11]
+    (Computer, [Cell12]) -> [Cell11]
+    (Computer, [Cell21]) -> [Cell11]
+    _                    -> []
+
+makeSampleGS :: Mark -> [Cell] -> Either (MoveError Player) GameState
+makeSampleGS initMark cells = do
+  let gs = initGameState initMark
+      moves = sequence_ $ map performMove cells
+  execStateT moves gs
+
+{-| Based on the given GameState, return the list of Cells that would be
+the best to play into.
+-}
+getBestCellChoices :: GameState -> Either (MoveError Player) [Cell]
+getBestCellChoices gs = do
+  cellScores <- scoreCellChoices gs
+  let bestScore = snd $ maximumBy (compare `on` snd) cellScores
+  pure $ map fst $ filter (eqRelErr 0.0001 bestScore . snd) cellScores
+
+scoreCellChoices :: GameState -> Either (MoveError Player) [(Cell, Double)]
+scoreCellChoices gs = do
+  tree <- makeChoiceTree ([], gs, Nothing)
+  let cellCounts = Map.toList $ foldTree makeCountMap tree
+      scoreCell = \(cell, counts) -> (cell, scoreOutcomeCount counts)
+  pure $ map scoreCell cellCounts
+
+{-| This function is used with the foldTree function to create a CountMap
+out of a ChoiceTree.
+-}
+makeCountMap :: ChoiceTuple -> [CountMap] -> CountMap
+makeCountMap (c:_, _, Just outcome) countMaps =
+    Map.insert c countForC countsMap
+  where countForC = fromMaybe countForThis mCountsForC
+        mCountsForC = addCounts countForThis <$> Map.lookup c countsMap
+        countForThis = case outcome of
+                          Winner Computer -> (1, 0, 0)
+                          Draw            -> (0, 1, 0)
+                          Winner Human    -> (0, 0, 1)
+        countsMap = mergeCountMaps countMaps
+makeCountMap (_, _, Nothing) countMaps = mergeCountMaps countMaps
+
+type OutcomeCount = (Int, Int, Int)
+type CountMap = Map Cell OutcomeCount
+
+mergeCountMaps :: [CountMap] -> CountMap
+mergeCountMaps countMaps = Map.unionsWith addCounts countMaps
+
+addCounts :: OutcomeCount -> OutcomeCount -> OutcomeCount
+addCounts (w1, d1, l1) (w2, d2, l2) = (w1 + w2, d1 + d2, l1 + l2)
+
+getPercents :: OutcomeCount -> (Double, Double, Double)
+getPercents (w, d, l) = (w' / total, d' / total, l' / total)
+  where w' = fromIntegral w
+        d' = fromIntegral d
+        l' = fromIntegral l
+        total = fromIntegral $ w + d + l
+
+scoreOutcomeCount :: OutcomeCount -> Double
+scoreOutcomeCount count = w - l
+  where (w, _, l) = getPercents count
+
+type ChoiceTuple = ([Cell], GameState, Maybe (GameOutcome Player))
+
+type ChoiceTree = Tree ChoiceTuple
+
+makeChoiceTree :: ChoiceTuple -> Either (MoveError Player) ChoiceTree
+makeChoiceTree ct@(cells, gs, maybeOutcome)
+  | isJust maybeOutcome = pure $ Node ct []
+  | otherwise = do
+      tuples <- traverse (makeChoiceTuple gs cells) (Just <$> getSmartMoves gs)
+      choiceForest <- traverse makeChoiceTree tuples
+      pure $ Node ct choiceForest
+
+makeChoiceTuple :: GameState
+                -> [Cell]
+                -> Maybe Cell
+                -> Either (MoveError Player) ChoiceTuple
+makeChoiceTuple gs cells Nothing = pure $ (cells, gs, checkGSForOutcome gs)
+makeChoiceTuple gs cells (Just cell) = do
+  gs' <- execStateT (performMove cell) gs
+  predictedOutcome <- getPredictedOutcome gs'
+  pure (cells ++ [cell], gs', predictedOutcome)
+
+getPredictedOutcome :: GameState
+                    -> Either (MoveError Player) (Maybe (GameOutcome Player))
+getPredictedOutcome gs =
+  case (getWinMoves gs, getBlockMoves gs, checkGSForOutcome gs) of
+    (_, _, Just outcome) -> pure $ Just outcome
+    ([], [], _) -> pure Nothing
+    ([], (_:_:_), _) -> pure (Just $ Winner $ flipPlayer $ nextPlayer gs)
+    ([], [c], _) -> do
+      gs' <- execStateT (performMove c) gs
+      getPredictedOutcome gs'
+    _ -> pure (Just $ Winner $ nextPlayer gs)
+
+getSmartMoves :: GameState -> [Cell]
+getSmartMoves gs =
+  case (getWinMoves gs, getBlockMoves gs) of
+    ([], [])          -> emptyCells $ gameBoard gs
+    -- ^ if no win moves and no blocking moves, just return the available moves
+    ([], [c])         -> [c]
+    -- ^ if no win moves but one blocking move, the block is the smart move
+    ([], (_:_:_))     -> []
+    -- ^ if multiple cells need to be blocked, there are no smart moves to make
+    (winningMoves, _) -> winningMoves
+    -- ^ if there are winning moves, return those
+
+{-| Get the list of Cells that the nextPlayer could play into to win the game
+on their current turn.
+-}
+getWinMoves :: GameState -> [Cell]
+getWinMoves gs = filter (isWinningMove gs) (emptyCells $ gameBoard gs)
+
+{-| Return True if the nextPlayer would win the game by playing into the given
+Cell.
+-}
+isWinningMove :: GameState -> Cell -> Bool
+isWinningMove gs cell = hasThreatLine (gameBoard gs) (nextMark gs) cell
+
+{-| Get the list of Cells that the current player must play into to prevent
+the opponent from winning in that Cell on their next turn.
+-}
+getBlockMoves :: GameState -> [Cell]
+getBlockMoves gs = filter (isBlockingMove gs) (emptyCells $ gameBoard gs)
+
+{-| Return True if playing into the given Cell would block the opponent from
+winning the game on their next turn.
+-}
+isBlockingMove :: GameState -> Cell -> Bool
+isBlockingMove gs cell =
+  hasThreatLine (gameBoard gs) (flipMark (nextMark gs)) cell
+
+-- Tree GameState = Node GameState [Tree GameState]
+
+{-| Return True if the given Board gives the player playing as @threatMark@
+more than one opportunity to win in just one move.
+-}
+hasMultipleThreats :: Board -> Mark -> Bool
+hasMultipleThreats board threatMark = length threats > 1
+  where threats = filter (hasThreatLine board threatMark) (emptyCells board)
+
+{-| Return True if the given Cell is part of a Line where one more Mark equal
+to @threatMark@ would complete the line and win the game.
+-}
+hasThreatLine :: Board -> Mark -> Cell -> Bool
+hasThreatLine board threatMark cell = any isThreat $ getAllLineMarks board cell
+    where threatsOnly (m1, m2, m3) = filter (== Just threatMark) [m1, m2, m3]
+          isThreat marks = length (threatsOnly marks) == 2
 
 -- | Get the list of Cells corresponding to the cells that are currently empty
 emptyCells :: Board -> [Cell]
@@ -146,65 +431,13 @@ Board under those lines.
 getAllLineMarks :: Board -> Cell -> [(Maybe Mark, Maybe Mark, Maybe Mark)]
 getAllLineMarks board = map (getLineMarks board) . getLinesThatCross
 
-{-| This function is the heart of how the computer selects its next move. It
-returns an integer corresponding to the relative importance of playing the
-next move into the line in question. A higher number means that it is more
-important to play on that line.  The first Mark input value determines which
-Mark (X or O) the AI should think of as "his."
--}
-scoreLineMarks :: Mark -> (Maybe Mark, Maybe Mark, Maybe Mark) -> Int
-scoreLineMarks myMark (c1, c2, c3) =
-  let marks = concatMap maybeToList [c1, c2, c3]
-   in case marks of
-        [] -> 1
-        [m] -> if m == myMark then 3 else 2
-        [m1, m2] -> case (m1 == m2, m1 == myMark) of
-                      (False, _)    -> 0
-                      (True, False) -> 8
-                      (True, True)  -> 24
-        _ -> -1
-
-{-| Return an Int that represents the relative importance of playing into the
-given Cell.  If the Cell would be a good place to play, return a higher Int.
-If it would be a poor place to play, return a lower Int.  The first Mark
-argument given to this function determines which Mark (X or O) that the AI
-will think of as "his."
--}
-scoreCell :: Mark -> Board -> Cell -> Int
-scoreCell myMark board cell =
-  sum $ map (scoreLineMarks myMark) $ getAllLineMarks board cell
-
-{-| For every Cell that is currently empty on the Board, assign an Int that
-represents the relative importance of playing into that cell next. The first
-Mark argument given to this function determines which Mark (X or O) that the
-AI will think of as "his."
--}
-scoreEmptyCells :: Mark -> Board -> [(Cell, Int)]
-scoreEmptyCells myMark board =
-  map (\cID -> (cID, scoreCell myMark board cID)) $ emptyCells board
-
-{-| Either return the Cell to play into next, or an 'InvalidMoveError Mark'.
-The first Mark argument given to this function determines which Mark (X or O)
-the AI will think of as "hers."
--}
-selectNextMove :: Mark -> Board -> Either (InvalidMoveError Mark) Cell
-selectNextMove myMark board =
-    case headMay $ reverse $ sortBy (compare `on` snd) emptyCellScores of
-      Just (cID, _) -> Right cID
-      Nothing       -> Left $ getOutcomeMoveError board errMsg
-  where emptyCellScores = scoreEmptyCells myMark board
-        errMsg = concat [ "The selectNextMove function found no empty "
-                        , "cells, but the checkForOutcome function did "
-                        , "not return an outcome."
-                        ]
-
-{-| Given a board that has an outcome, return an informative InvalidMoveError.
+{-| Given a board that has an outcome, return an informative MoveError.
 This function assumes that the given board has an outcome (win or draw).  An
 UnknownMoveErr will be returned if this function is called on a board that
 doesn't have an outcome. This function should only be used in situations where
 you know that the board does in fact have an outcome.
 -}
-getOutcomeMoveError :: Board -> String -> InvalidMoveError Mark
+getOutcomeMoveError :: Board -> String -> MoveError Mark
 getOutcomeMoveError board errMsg =
   case checkForOutcome board of
     Just outcome -> GameOver outcome
@@ -263,6 +496,12 @@ data GameState = GameState { nextPlayer :: Player
 -- | Get the Mark for the Human Player from a GameState
 humanMark :: GameState -> Mark
 humanMark = flipMark . computerMark
+
+-- | Get the Mark that will be played next in the game
+nextMark :: GameState -> Mark
+nextMark gs = if nextPlayer gs == Computer
+                 then computerMark gs
+                 else humanMark gs
 
 {-| A Type representing the outcome of a game. This will be used as either
 'GameOutcome Mark' or 'GameOutcome Player'.
@@ -349,9 +588,9 @@ initGameState O = GameState { nextPlayer = Computer
                             }
 
 {-| Return a StateT that will either play the correct Mark value into the given
-Cell, or will return an 'InvalidMoveError Player'.
+Cell, or will return an 'MoveError Player'.
 -}
-doHumanMove :: Cell -> StateT GameState (Either (InvalidMoveError Player)) ()
+doHumanMove :: Cell -> TicTacToe ()
 doHumanMove cell = do
   gs <- get
   case nextPlayer gs of
@@ -359,22 +598,9 @@ doHumanMove cell = do
     Human -> performMove cell
 
 {-| Return a StateT that will either play the correct Mark (X or O) into the
-Cell chosen by the computer, or return an 'InvalidMoveError Player'
--}
-doComputerMove :: StateT GameState (Either (InvalidMoveError Player)) ()
-doComputerMove = do
-  gs <- get
-  case nextPlayer gs of
-    Human -> lift $ Left (NotTurnOf Computer)
-    Computer -> do
-      case selectNextMove (computerMark gs) (gameBoard gs) of
-        Left err -> lift $ Left $ promoteMoveError gs err
-        Right cell -> performMove cell
-
-{-| Return a StateT that will either play the correct Mark (X or O) into the
 given Cell, or will return an error message.
 -}
-performMove :: Cell -> StateT GameState (Either (InvalidMoveError Player)) ()
+performMove :: Cell -> TicTacToe ()
 performMove cell = do
   gs <- get
   case checkGSForOutcome gs of
@@ -402,24 +628,24 @@ printGameState gs =
                          ]
 
 -- | The main loop for the text version of this game.
-textGameLoop :: GameState -> IO ()
-textGameLoop gs = do
-  printGameState gs
+textGameLoop :: TicTacToeIO ()
+textGameLoop = do
+  gs <- get
+  liftIO $ printGameState gs
   case (checkGSForOutcome gs, nextPlayer gs) of
-    (Just (Winner winner), _)   -> return ()
-    (Just Draw, _)              -> return ()
-    (Nothing, Computer)         -> do
-      case execStateT doComputerMove gs of
-        Left err -> putStrLn $ show err
-        Right newGS -> textGameLoop newGS
-    (Nothing, Human)            -> do
-      cell <- askWhichCell (gameBoard gs)
-      case execStateT (doHumanMove cell) gs of
-        Left err -> putStrLn $ show err
-        Right newGS -> textGameLoop newGS
+    (Just _, _)         -> pure ()
+    (Nothing, Computer) -> doComputerMove >> textGameLoop
+    (Nothing, Human)    -> do
+      cell <- liftIO $ askWhichCell (gameBoard gs)
+      liftTicTacToe $ doHumanMove cell
+      textGameLoop
 
 -- | Entrypoint for running the text version of this game.
 playTextGame :: IO ()
 playTextGame = do
   humanMark <- askWhichMark
-  textGameLoop (initGameState humanMark)
+  moveErrorOrUnit <- evalTicTacToeIO textGameLoop (initGameState humanMark)
+  case moveErrorOrUnit of
+    Left err -> print err
+    _        -> pure ()
+
