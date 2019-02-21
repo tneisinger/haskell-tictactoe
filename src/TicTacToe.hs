@@ -4,7 +4,7 @@ module TicTacToe where
 
 import Control.Monad.State
 import Control.Monad.Except
-import Data.Tree
+import Data.Tree (foldTree, Tree(..))
 import Data.Char (toUpper)
 import Data.Function (on)
 import Data.Maybe (isJust, fromMaybe)
