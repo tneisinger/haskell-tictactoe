@@ -4,7 +4,7 @@ module TicTacToe where
 
 import Control.Monad.State
 import Control.Monad.Except
-import Data.Tree (foldTree, Tree(..))
+import Data.Tree (flatten, Tree(..))
 import Data.Char (toUpper)
 import Data.Function (on)
 import Data.Maybe (isJust, fromMaybe)
@@ -272,7 +272,7 @@ getBestCellChoices gs = do
 scoreCellChoices :: GameState -> Either (MoveError Player) [(Cell, Double)]
 scoreCellChoices gs = do
   tree <- makeChoiceTree ([], gs, Nothing)
-  let cellCounts = Map.toList $ foldTree makeCountMap tree
+  let cellCounts = getCellCounts tree
       scoreCell = \(cell, counts) -> (cell, scoreOutcomeCount counts)
   pure $ map scoreCell cellCounts
 
@@ -310,6 +310,18 @@ getPercents (w, d, l) = (w' / total, d' / total, l' / total)
 scoreOutcomeCount :: OutcomeCount -> Double
 scoreOutcomeCount count = w - l
   where (w, _, l) = getPercents count
+
+getCellCounts :: ChoiceTree -> [(Cell, OutcomeCount)]
+getCellCounts tree =
+    Map.toList $ mergeCountMaps $ foldr go [] $ flatten tree
+  where go (_, _, Nothing) countMaps = countMaps
+        go (c:_, _, Just outcome) countMaps =
+          Map.fromList [(c, scoreOutcome outcome)] : countMaps
+
+scoreOutcome :: GameOutcome Player -> OutcomeCount
+scoreOutcome (Winner Computer) = (1,0,0)
+scoreOutcome Draw = (0,1,0)
+scoreOutcome (Winner Human) = (0,0,1)
 
 type ChoiceTuple = ([Cell], GameState, Maybe (GameOutcome Player))
 
