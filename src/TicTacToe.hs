@@ -518,6 +518,10 @@ data GameState = GameState { stdGen :: StdGen
                            , gameBoard :: Board
                            } deriving (Show)
 
+instance Eq GameState where
+  GameState _ p1 m1 b1 == GameState _ p2 m2 b2 =
+    p1 == p2 && m1 == m2 && b1 == b2
+
 -- | Get the Mark for the Human Player from a GameState
 humanMark :: GameState -> Mark
 humanMark = flipMark . computerMark
