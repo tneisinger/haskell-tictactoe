@@ -268,9 +268,9 @@ getBestCellsEarlyGame gs =
     _                    -> []
 
 -- | A convenience function for making arbitrary GameStates
-makeSampleGS :: Mark -> StdGen -> [Cell] -> Either (MoveError Player) GameState
-makeSampleGS initMark gen cells = do
-  let gs = initGameState initMark gen
+makeSampleGS :: Mark -> Int -> [Cell] -> Either (MoveError Player) GameState
+makeSampleGS initMark genInt cells = do
+  let gs = initGameState initMark genInt
       moves = sequence_ $ map performMove cells
   execStateT moves gs
 
@@ -602,20 +602,23 @@ askWhichCell board = do
          else return cell
 
 -- | Create an initial GameState based on the Mark the human wants to play as.
-initGameState :: Mark ->  StdGen -> GameState
-initGameState X gen = GameState { stdGen = gen
-                                , nextPlayer = Human
-                                , computerMark = O
-                                , gameBoard = blankBoard
-                                }
-initGameState O gen = GameState { stdGen = gen
-                                , nextPlayer = Computer
-                                , computerMark = X
-                                , gameBoard = blankBoard
-                                }
+initGameState :: Mark ->  Int -> GameState
+initGameState X i = GameState { stdGen = mkStdGen i
+                              , nextPlayer = Human
+                              , computerMark = O
+                              , gameBoard = blankBoard
+                              }
+initGameState O i = GameState { stdGen = mkStdGen i
+                              , nextPlayer = Computer
+                              , computerMark = X
+                              , gameBoard = blankBoard
+                              }
 
+{-| Reset the GameState to a new game, but keeping the StdGen so that
+the randomness will carry forward into the new game.
+-}
 newGameState :: GameState -> Mark -> GameState
-newGameState gs mark = initGameState mark (stdGen gs)
+newGameState gs mark = (initGameState mark 0) { stdGen = stdGen gs }
 
 {-| Return a StateT that will either play the correct Mark value into the given
 Cell, or will return an 'MoveError Player'.
@@ -674,8 +677,7 @@ textGameLoop = do
 playTextGame :: IO ()
 playTextGame = do
   humanMark <- askWhichMark
-  let gen = mkStdGen 42
-  moveErrorOrUnit <- evalTicTacToeIO textGameLoop (initGameState humanMark gen)
+  moveErrorOrUnit <- evalTicTacToeIO textGameLoop (initGameState humanMark 42)
   case moveErrorOrUnit of
     Left err -> print err
     _        -> pure ()
