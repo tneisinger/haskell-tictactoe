@@ -6,12 +6,11 @@ import Data.Tree (flatten, Tree(..))
 import Data.Char (toUpper)
 import Data.Function (on)
 import Data.Maybe (isJust, fromMaybe)
-import Data.List (sort, maximumBy)
+import Data.List (maximumBy)
 import Data.Map (Map)
 import Numeric.MathFunctions.Comparison (eqRelErr)
 import System.Random
 import qualified Data.Map as Map
-import qualified Data.Set as Set
 
 -- | A simple datatype to represent an X or an O in a tic-tac-toe game.
 data Mark = X | O
@@ -68,9 +67,9 @@ Although the 'a' is fully polymorphic, this type will exclusively be used as
 either 'MoveError Mark or 'MoveError Player'.
 -}
 data MoveError a = CellFull Cell Mark
-                        | GameOver (GameOutcome a)
-                        | NotTurnOf a
-                        | UnknownMoveErr Board String
+                 | GameOver (GameOutcome a)
+                 | NotTurnOf a
+                 | UnknownMoveErr Board String
 
 -- | Used in the Show instance for the MoveError type.
 showMoveErrorPrefix :: String
@@ -78,6 +77,10 @@ showMoveErrorPrefix = "MoveError: "
 
 -- | Give a description of a MoveError when using show.
 instance Show a => Show (MoveError a) where
+  show (CellFull cell mark) =
+    concat [ showMoveErrorPrefix
+           , show cell ++ " already contains " ++ show mark
+           ]
   show (GameOver outcome) =
     concat [ showMoveErrorPrefix
            , "No other moves can be made because the game is over.\n"
@@ -301,7 +304,7 @@ makeCountMap (c:_, _, Just outcome) countMaps =
                           Draw            -> (0, 1, 0)
                           Winner Human    -> (0, 0, 1)
         countsMap = mergeCountMaps countMaps
-makeCountMap (_, _, Nothing) countMaps = mergeCountMaps countMaps
+makeCountMap _ countMaps = mergeCountMaps countMaps
 
 type OutcomeCount = (Int, Int, Int)
 type CountMap = Map Cell OutcomeCount
@@ -326,9 +329,9 @@ scoreOutcomeCount count = w - l
 getCellCounts :: ChoiceTree -> [(Cell, OutcomeCount)]
 getCellCounts tree =
     Map.toList $ mergeCountMaps $ foldr go [] $ flatten tree
-  where go (_, _, Nothing) countMaps = countMaps
-        go (c:_, _, Just outcome) countMaps =
+  where go (c:_, _, Just outcome) countMaps =
           Map.fromList [(c, scoreOutcome outcome)] : countMaps
+        go _ countMaps = countMaps
 
 scoreOutcome :: GameOutcome Player -> OutcomeCount
 scoreOutcome (Winner Computer) = (1,0,0)
@@ -543,6 +546,7 @@ checkForOutcome board =
     [] -> if length (Map.toList board) == 9
              then Just Draw
              else Nothing
+    _  -> Nothing
 
 {-| Check if the given GameState represents a finished game.  If the game isn't
 finished yet, return `Nothing`.  If the game is finished and it is a draw,
@@ -582,7 +586,7 @@ askWhichMark = do
   response <- (map toUpper) <$> getLine
   case reads response of
     [] -> putStrLn "Please enter an X or an O..." >> askWhichMark
-    [(mark, _)] -> return mark
+    (mark, _):_ -> return mark
 
 {-| Ask the player which Cell they would like to play into.  Return the Cell
 chosen by the player.
@@ -675,8 +679,8 @@ textGameLoop = do
 -- | Entrypoint for running the text version of this game.
 playTextGame :: IO ()
 playTextGame = do
-  humanMark <- askWhichMark
-  moveErrorOrUnit <- evalTicTacToeIO textGameLoop (initGameState humanMark 42)
+  mark <- askWhichMark
+  moveErrorOrUnit <- evalTicTacToeIO textGameLoop (initGameState mark 42)
   case moveErrorOrUnit of
     Left err -> print err
     _        -> pure ()
