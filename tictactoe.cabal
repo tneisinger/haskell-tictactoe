@@ -13,6 +13,20 @@ build-type:          Simple
 extra-source-files:  README.md
 cabal-version:       >=1.10
 
+executable tictactoe
+  hs-source-dirs:      src
+  ghc-options:         -Wall -fwarn-tabs -Wcompat -Wincomplete-record-updates
+                       -Wincomplete-uni-patterns -Wredundant-constraints
+  main-is:             Main.hs
+  default-language:    Haskell2010
+  build-depends:       base >= 4.7 && < 5
+                     , mtl
+                     , containers
+                     , safe
+                     , math-functions
+                     , random
+  other-modules:       TicTacToe
+
 library
   hs-source-dirs:      src
   exposed-modules:     TicTacToe
