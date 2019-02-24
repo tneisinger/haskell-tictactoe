@@ -424,7 +424,7 @@ hasThreatLine board threatMark cell = any isThreat $ getAllLineMarks board cell
     where threatsOnly (m1, m2, m3) = filter (== Just threatMark) [m1, m2, m3]
           isThreat marks = length (threatsOnly marks) == 2
 
--- | Get the list of Cells corresponding to the cells that are currently empty
+-- | Get the list of Cells that are currently empty
 emptyCells :: Board -> [Cell]
 emptyCells board = filter (flip Map.notMember board) [Cell00 ..]
 
