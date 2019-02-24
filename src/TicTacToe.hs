@@ -1,5 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
-
 module TicTacToe where
 
 import Control.Monad.State
@@ -425,10 +423,7 @@ hasThreatLine board threatMark cell = any isThreat $ getAllLineMarks board cell
 
 -- | Get the list of Cells corresponding to the cells that are currently empty
 emptyCells :: Board -> [Cell]
-emptyCells board =
-  let setFilledCells = Set.fromList $ Map.keys board
-      setAllCells = Set.fromList [Cell00 ..]
-   in sort $ Set.toList $ Set.difference setAllCells setFilledCells
+emptyCells board = filter (flip Map.notMember board) [Cell00 ..]
 
 -- | Predicate to determine if the given Line goes through the given Cell.
 lineCrosses :: Cell -> Line -> Bool
