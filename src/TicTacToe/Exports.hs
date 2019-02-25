@@ -18,15 +18,17 @@ module TicTacToe.Exports
        , humanMark
        , initGameState
        , liftTicTacToe
+       , maybeIntToCell
        , newGameState
        , showBoard
+       , showBoardWithCellNums
        , showCellContents
        ) where
 
 import TicTacToe.AI (doComputerMove)
 import TicTacToe.Basic (checkGSForOutcome, doHumanMove, emptyCells, humanMark,
-                        initGameState, newGameState, showBoard,
-                        showCellContents)
+                        initGameState, maybeIntToCell, newGameState, showBoard,
+                        showBoardWithCellNums, showCellContents)
 import TicTacToe.Types (Board, Cell(..), GameOutcome(..),
                         GameState(nextPlayer, computerMark, gameBoard),
                         Mark(..), Player(..), TicTacToe, TicTacToeIO,

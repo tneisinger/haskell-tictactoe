@@ -1,5 +1,6 @@
 module TicTacToe.Basic
        ( checkGSForOutcome
+       , doHumanMove
        , emptyCells
        , fillCell
        , flipMark
@@ -8,13 +9,14 @@ module TicTacToe.Basic
        , getWinningLines
        , humanMark
        , initGameState
+       , makeSampleGS
+       , maybeIntToCell
        , newGameState
        , nextMark
+       , performMove
        , promoteMoveError
        , showBoard
-       , performMove
-       , doHumanMove
-       , makeSampleGS
+       , showBoardWithCellNums
        , showCellContents
        ) where
 
@@ -114,39 +116,93 @@ Board under those lines.
 getAllLineMarks :: Board -> Cell -> [(Maybe Mark, Maybe Mark, Maybe Mark)]
 getAllLineMarks board = map (getLineMarks board) . getLinesThatCross
 
--- | Return a String representation of a Board
-showBoard :: Board -> String
-showBoard board =
+showBoardWith :: (Board -> Line -> String) -> Board -> String
+showBoardWith f board =
   let aboveRow  = "    |   |    "
       belowRow  = " ___|___|___ "
-      bottom    = "    |   |"
-      row1      = showLine board Line00to02
-      row2      = showLine board Line10to12
-      row3      = showLine board Line20to22
-   in unlines [ aboveRow, row1, belowRow,
-                aboveRow, row2, belowRow,
-                aboveRow, row3, bottom ]
+      bottom    = "    |   |    "
+      row1      = f board Line00to02
+      row2      = f board Line10to12
+      row3      = f board Line20to22
+   in unlines [ aboveRow
+              , row1
+              , belowRow
+              , aboveRow
+              , row2
+              , belowRow
+              , aboveRow
+              , row3
+              , bottom ]
+
+-- | Return a String representation of a Board
+showBoard :: Board -> String
+showBoard = showBoardWith showLine
+
+{-| Return a String representation of a Board, but with all the empty cells
+filled with an integer.  The cells will be filled with the integers 1-9.  When
+empty, Cell00 will always display "1", Cell01 will always display "2", and so
+on.
+-}
+showBoardWithCellNums :: Board -> String
+showBoardWithCellNums = showBoardWith showLineWithCellNums
 
 {-| Return a String representation of the contents of a Cell.
 Display `Nothing` as a space (" "), `Just X` as "X", and `Just O` as "O"
 -}
 showCellContents :: Board -> Cell -> String
-showCellContents board cell =
+showCellContents = showCellContentsWith (const " ")
+
+showCellContentsOrNum :: Board -> Cell -> String
+showCellContentsOrNum = showCellContentsWith (show . cellToInt)
+
+showCellContentsWith :: (Cell -> String) -> Board -> Cell -> String
+showCellContentsWith f board cell =
   case Map.lookup cell board of
-    Nothing   -> " "
+    Nothing   -> f cell
     Just mark -> show mark
+
+cellToInt :: Cell -> Int
+cellToInt Cell00 = 1
+cellToInt Cell01 = 2
+cellToInt Cell02 = 3
+cellToInt Cell10 = 4
+cellToInt Cell11 = 5
+cellToInt Cell12 = 6
+cellToInt Cell20 = 7
+cellToInt Cell21 = 8
+cellToInt Cell22 = 9
+
+maybeIntToCell :: Int -> Maybe Cell
+maybeIntToCell 1 = Just Cell00
+maybeIntToCell 2 = Just Cell01
+maybeIntToCell 3 = Just Cell02
+maybeIntToCell 4 = Just Cell10
+maybeIntToCell 5 = Just Cell11
+maybeIntToCell 6 = Just Cell12
+maybeIntToCell 7 = Just Cell20
+maybeIntToCell 8 = Just Cell21
+maybeIntToCell 9 = Just Cell22
+maybeIntToCell _ = Nothing
+
+showLineWith :: (Board -> Cell -> String) -> Board -> Line -> String
+showLineWith f board line =
+  let (c1, c2, c3) = lineToCells line
+   in concat [ "  "
+             , f board c1
+             , " | "
+             , f board c2
+             , " | "
+             , f board c3
+             , "  "
+             ]
 
 -- | Return the String representation of a horizontal line of the Board
 showLine :: Board -> Line -> String
-showLine board line =
-  let (c1, c2, c3) = lineToCells line
-   in concat [ "  "
-             , showCellContents board c1
-             , " | "
-             , showCellContents board c2
-             , " | "
-             , showCellContents board c3
-             ]
+showLine = showLineWith showCellContents
+
+-- | Return the String representation of a horizontal line of the Board
+showLineWithCellNums :: Board -> Line -> String
+showLineWithCellNums = showLineWith showCellContentsOrNum
 
 -- | A convenience function for getting the opposite Player
 flipPlayer :: Player -> Player
