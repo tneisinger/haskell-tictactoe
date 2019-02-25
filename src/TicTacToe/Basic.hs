@@ -15,6 +15,7 @@ module TicTacToe.Basic
        , performMove
        , doHumanMove
        , makeSampleGS
+       , showCellContents
        ) where
 
 import Control.Monad.State (execStateT, put, get, lift)
