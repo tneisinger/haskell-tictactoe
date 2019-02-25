@@ -3,11 +3,13 @@ module Main where
 import Control.Monad.State (get, liftIO)
 import Data.Char (toUpper)
 
-import TicTacToe.AI (doComputerMove)
-import TicTacToe.Basic (doHumanMove, humanMark, showBoard, emptyCells,
-                        checkGSForOutcome, initGameState)
-import TicTacToe.Types (TicTacToeIO, Board, Cell, Player(..), GameState(..),
-                        GameOutcome(..), Mark, liftTicTacToe, evalTicTacToeIO)
+import TicTacToe.Exports (Board, Cell, GameOutcome(..),
+                          GameState(computerMark, gameBoard, nextPlayer),
+                          GameOutcome(..), Mark, Player(..), TicTacToeIO,
+                          checkGSForOutcome, doComputerMove, doHumanMove,
+                          emptyCells, evalTicTacToeIO, humanMark,
+                          initGameState, liftTicTacToe, showBoard)
+
 
 
 main :: IO ()
