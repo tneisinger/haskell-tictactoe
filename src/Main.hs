@@ -4,10 +4,10 @@ import Control.Monad.State (get, liftIO)
 import Data.Char (toUpper)
 
 import TicTacToe.AI (doComputerMove)
-import TicTacToe.Basic (TicTacToeIO, Board, Cell, Player(..), GameState(..),
-                        Mark, GameOutcome(..), doHumanMove, humanMark,
-                        showBoard, emptyCells, checkGSForOutcome,
-                        liftTicTacToe, initGameState, evalTicTacToeIO)
+import TicTacToe.Basic (doHumanMove, humanMark, showBoard, emptyCells,
+                        checkGSForOutcome, initGameState)
+import TicTacToe.Types (TicTacToeIO, Board, Cell, Player(..), GameState(..),
+                        GameOutcome(..), Mark, liftTicTacToe, evalTicTacToeIO)
 
 
 main :: IO ()

@@ -25,12 +25,14 @@ executable tictactoe
                      , safe
                      , math-functions
                      , random
-  other-modules:       TicTacToe.Basic
+  other-modules:       TicTacToe.Types
+                     , TicTacToe.Basic
                      , TicTacToe.AI
 
 library
   hs-source-dirs:      src
-  exposed-modules:     TicTacToe.Basic
+  exposed-modules:     TicTacToe.Types
+                     , TicTacToe.Basic
                      , TicTacToe.AI
   build-depends:       base >= 4.7 && < 5
                      , mtl

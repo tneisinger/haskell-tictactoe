@@ -12,12 +12,11 @@ import Data.Tree (flatten, Tree(..))
 import Numeric.MathFunctions.Comparison (eqRelErr)
 import System.Random (randomR)
 
-import TicTacToe.Basic (Board, Cell, Player(..), GameState(..), Mark,
+import TicTacToe.Basic (checkGSForOutcome, flipPlayer, flipMark, nextMark,
+                        getAllLineMarks, emptyCells, performMove)
+import TicTacToe.Types (Board, Cell, Player(..), GameState(..), Mark,
                         GameOutcome(..), MoveError, Cell(..), TicTacToe,
-                        MoveError(..), checkGSForOutcome, flipPlayer,
-                        flipMark, nextMark, getAllLineMarks, emptyCells,
-                        performMove, evalTicTacToeIO, initGameState,
-                        nextPlayer)
+                        MoveError(..))
 
 import qualified Data.Map as Map
 
