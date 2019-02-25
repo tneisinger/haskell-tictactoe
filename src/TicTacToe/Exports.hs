@@ -15,6 +15,8 @@ module TicTacToe.Exports
        , doHumanMove
        , emptyCells
        , evalTicTacToeIO
+       , getWinningCells
+       , getWinningLines
        , humanMark
        , initGameState
        , liftTicTacToe
@@ -26,7 +28,8 @@ module TicTacToe.Exports
        ) where
 
 import TicTacToe.AI (doComputerMove)
-import TicTacToe.Basic (checkGSForOutcome, doHumanMove, emptyCells, humanMark,
+import TicTacToe.Basic (checkGSForOutcome, doHumanMove, emptyCells,
+                        getWinningCells, getWinningLines, humanMark,
                         initGameState, maybeIntToCell, newGameState, showBoard,
                         showBoardWithCellNums, showCellContents)
 import TicTacToe.Types (Board, Cell(..), GameOutcome(..),

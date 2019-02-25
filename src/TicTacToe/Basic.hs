@@ -6,6 +6,7 @@ module TicTacToe.Basic
        , flipMark
        , flipPlayer
        , getAllLineMarks
+       , getWinningCells
        , getWinningLines
        , humanMark
        , initGameState
@@ -261,6 +262,11 @@ checkLineForWinner board line =
 getWinningLines :: Board -> [Line]
 getWinningLines board =
   filter (isJust . checkLineForWinner board) [Line00to02 ..]
+
+-- | Get a list of the Cells that make up the winning Lines
+getWinningCells :: Board -> [Cell]
+getWinningCells board = concatMap go $ map lineToCells (getWinningLines board)
+  where go (c1, c2, c3) = [c1, c2, c3]
 
 -- | Create an initial GameState based on the Mark the human wants to play as.
 initGameState :: Mark ->  Int -> GameState
