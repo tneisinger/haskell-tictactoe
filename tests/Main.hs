@@ -85,25 +85,78 @@ main = hspec $ do
        in checkGSForOutcome <$> makeSampleGS X 99 moves `shouldSatisfy`
             hasOutcome (Just (Winner Human))
 
+  describe "doComputerMove" $ do
+
+    -- The corners are the best cells to play into as the first move of the
+    -- game, so make sure that doComputerMove does that.
+    it "plays into a corner on first move of a game" $
+      (makeSampleGS O 42 [] >>= execTicTacToe doComputerMove) `shouldBeOneOf`
+       [ makeSampleGS O 11 [Cell00]
+       , makeSampleGS O 88 [Cell02]
+       , makeSampleGS O 19 [Cell20]
+       , makeSampleGS O 55 [Cell22] ]
+
+    -- If your opponent plays into a corner as the first move of the game, your
+    -- best move is to play into the opposite corner.  Make sure that
+    -- doComputerMove does that.
+    it "plays into opposite corner, Cell22 after opponent plays in Cell00" $
+      (makeSampleGS X 9 [Cell00] >>= execTicTacToe doComputerMove)
+        `shouldBe` makeSampleGS X 4 [Cell00, Cell22]
+    it "plays into opposite corner, Cell00 after opponent plays in Cell22" $
+      (makeSampleGS X 9 [Cell22] >>= execTicTacToe doComputerMove)
+        `shouldBe` makeSampleGS X 4 [Cell22, Cell00]
+    it "plays into opposite corner, Cell02 after opponent plays in Cell20" $
+      (makeSampleGS X 9 [Cell20] >>= execTicTacToe doComputerMove)
+        `shouldBe` makeSampleGS X 4 [Cell20, Cell02]
+    it "plays into opposite corner, Cell20 after opponent plays in Cell02" $
+      (makeSampleGS X 9 [Cell02] >>= execTicTacToe doComputerMove)
+        `shouldBe` makeSampleGS X 4 [Cell02, Cell20]
+
+    -- Make sure that doComputerMove returns an error when it can't or
+    -- shouldn't make a move.
+    it "won't make a move if it is not Computer's turn" $
+      (makeSampleGS X 17 [] >>= execTicTacToe doComputerMove) `shouldSatisfy`
+        isLeft
+    it "won't make a move if the board is full" $
+      let moves = [Cell00, Cell22, Cell11, Cell02, Cell12, Cell10, Cell21,
+                   Cell01, Cell20]
+       in (makeSampleGS X 17 moves >>= execTicTacToe doComputerMove)
+            `shouldSatisfy` isLeft
+    it "won't make a move if the Human has already won the game" $
+      let moves = [Cell01, Cell22, Cell21, Cell11, Cell02, Cell00]
+       in (makeSampleGS O 31 moves >>= execTicTacToe doComputerMove)
+            `shouldSatisfy` isLeft
+
+
 -- ========================================================================= --
 --                              HELPER FUNCTIONS                             --
 -- ========================================================================= --
 
--- For checkGSForOutcome --
-
-hasOutcome :: Eq a => Maybe a -> Either b (Maybe a) -> Bool
-hasOutcome _ (Left _) = False
-hasOutcome mVal1 (Right mVal2) = mVal1 == mVal2
-
--- For makeSampleGS --
+-- General
 
 shouldBeR :: (Show a, Show b, Eq b) => Either a b -> b -> Expectation
 shouldBeR (Left err) _ = expectationFailure (show err)
 shouldBeR (Right a) b = a `shouldBe` b
 
+shouldBeOneOf :: Eq a => a -> [a] -> Expectation
+shouldBeOneOf x xs =
+  if any (== x) xs
+     then pure ()
+     else expectationFailure "element not found in list by shouldBeOneOf"
+
 isLeft :: Either a b -> Bool
 isLeft (Left _) = True
 isLeft (Right _) = False
+
+
+-- For checkGSForOutcome
+
+hasOutcome :: Eq a => Maybe a -> Either b (Maybe a) -> Bool
+hasOutcome _ (Left _) = False
+hasOutcome mVal1 (Right mVal2) = mVal1 == mVal2
+
+
+-- For makeSampleGS
 
 shouldMatchListR :: (Show a, Show c, Eq c) =>
                  (b -> [c]) -> Either a b -> [c] -> Expectation
@@ -118,5 +171,3 @@ sampleBoardHas :: (Show a)
                  -> [(Cell, Mark)]
                  -> Expectation
 sampleBoardHas = shouldMatchListR (Map.toList . gameBoard)
-
-
