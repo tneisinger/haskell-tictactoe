@@ -48,6 +48,7 @@ data MoveError a = CellFull Cell Mark
                  | GameOver (GameOutcome a)
                  | NotTurnOf a
                  | UnknownMoveErr Board String
+                   deriving (Eq)
 
 -- | Used in the Show instance for the MoveError type.
 showMoveErrorPrefix :: String
