@@ -15,6 +15,8 @@ module TicTacToe.Types
 
          -- * Functions
        , liftTicTacToe
+       , evalTicTacToe
+       , execTicTacToe
        , evalTicTacToeIO
        , execTicTacToeIO
        ) where
@@ -140,6 +142,23 @@ liftTicTacToe f = do
   case runStateT f gs of
     Left err -> lift $ throwError err
     Right (a, gs') -> put gs' >> pure a
+
+{-| Run a TicTacToe operation against a GameState and get the resulting
+GameState as the return value.
+-}
+execTicTacToe :: TicTacToe a
+              -> GameState
+              -> Either (MoveError Player) GameState
+execTicTacToe t = execStateT t
+
+{-| Run a TicTacToe operation against a GameState and get back the result of
+that operation.
+-}
+evalTicTacToe :: TicTacToe a
+               -> GameState
+               -> Either (MoveError Player) a
+evalTicTacToe t = evalStateT t
+
 
 {-| Run a TicTacToeIO operation against a GameState and get the resulting
 GameState as the return value.
