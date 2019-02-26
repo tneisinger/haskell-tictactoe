@@ -2,7 +2,6 @@ module Main where
 
 import qualified Data.Map as Map
 import Test.Hspec
--- import Test.QuickCheck
 
 import TicTacToe.Exports
 
@@ -50,10 +49,53 @@ main = hspec $ do
       let moves = [Cell11, Cell20, Cell00, Cell22, Cell10, Cell21, Cell02]
        in makeSampleGS X 99 moves `shouldSatisfy` isLeft
 
+  describe "checkGSForOutcome" $ do
+    it "gives Nothing if the game isn't over yet" $
+      checkGSForOutcome <$> makeSampleGS X 99 [Cell00, Cell22, Cell11]
+        `shouldSatisfy` (hasOutcome Nothing)
+    it "gives (Just Draw) if all the cells are full and nobody won" $
+      let moves = [Cell00, Cell22, Cell11, Cell02, Cell12, Cell10, Cell21,
+                   Cell01, Cell20]
+       in checkGSForOutcome <$> makeSampleGS X 99 moves `shouldSatisfy`
+            hasOutcome (Just Draw)
+    it "gives (Just (Winner Human)) if Human wins as X" $
+      let moves = [Cell00, Cell22, Cell01, Cell12, Cell02]
+       in checkGSForOutcome <$> makeSampleGS X 99 moves `shouldSatisfy`
+            hasOutcome (Just (Winner Human))
+    it "gives (Just (Winner Human)) if Human wins as O" $
+      let moves = [Cell01, Cell22, Cell21, Cell11, Cell02, Cell00]
+       in checkGSForOutcome <$> makeSampleGS O 99 moves `shouldSatisfy`
+            hasOutcome (Just (Winner Human))
+    it "gives (Just (Winner Computer)) if Computer wins as X" $
+      let moves = [Cell00, Cell22, Cell01, Cell12, Cell02]
+       in checkGSForOutcome <$> makeSampleGS O 99 moves `shouldSatisfy`
+            hasOutcome (Just (Winner Computer))
+    it "gives (Just (Winner Computer)) if Computer wins as O" $
+      let moves = [Cell01, Cell22, Cell21, Cell11, Cell02, Cell00]
+       in checkGSForOutcome <$> makeSampleGS X 99 moves `shouldSatisfy`
+            hasOutcome (Just (Winner Computer))
+    it "gives (Just (Winner Computer)) if Computer wins on full board" $
+      let moves = [Cell01, Cell22, Cell21, Cell11, Cell02, Cell12, Cell10,
+                   Cell20, Cell00]
+       in checkGSForOutcome <$> makeSampleGS O 99 moves `shouldSatisfy`
+            hasOutcome (Just (Winner Computer))
+    it "gives (Just (Winner Human)) if Human wins on full board" $
+      let moves = [Cell01, Cell22, Cell21, Cell11, Cell02, Cell12, Cell10,
+                   Cell20, Cell00]
+       in checkGSForOutcome <$> makeSampleGS X 99 moves `shouldSatisfy`
+            hasOutcome (Just (Winner Human))
 
 -- ========================================================================= --
 --                              HELPER FUNCTIONS                             --
 -- ========================================================================= --
+
+-- For checkGSForOutcome --
+
+hasOutcome :: Eq a => Maybe a -> Either b (Maybe a) -> Bool
+hasOutcome _ (Left _) = False
+hasOutcome mVal1 (Right mVal2) = mVal1 == mVal2
+
+-- For makeSampleGS --
 
 shouldBeR :: (Show a, Show b, Eq b) => Either a b -> b -> Expectation
 shouldBeR (Left err) _ = expectationFailure (show err)
@@ -76,3 +118,5 @@ sampleBoardHas :: (Show a)
                  -> [(Cell, Mark)]
                  -> Expectation
 sampleBoardHas = shouldMatchListR (Map.toList . gameBoard)
+
+
