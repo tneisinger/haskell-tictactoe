@@ -97,20 +97,20 @@ main = hspec $ do
        , makeSampleGS O 55 [Cell22] ]
 
     -- If your opponent plays into a corner as the first move of the game, your
-    -- best move is to play into the opposite corner.  Make sure that
-    -- doComputerMove does that.
-    it "plays into opposite corner, Cell22 after opponent plays in Cell00" $
+    -- best move is to play into the center.  Make sure that doComputerMove
+    -- does that.
+    it "After opponent plays in Cell00, play into the center cell" $
       (makeSampleGS X 9 [Cell00] >>= execTicTacToe doComputerMove)
-        `shouldBe` makeSampleGS X 4 [Cell00, Cell22]
-    it "plays into opposite corner, Cell00 after opponent plays in Cell22" $
+        `shouldBe` makeSampleGS X 4 [Cell00, Cell11]
+    it "After opponent plays in Cell22, play into the center cell" $
       (makeSampleGS X 9 [Cell22] >>= execTicTacToe doComputerMove)
-        `shouldBe` makeSampleGS X 4 [Cell22, Cell00]
-    it "plays into opposite corner, Cell02 after opponent plays in Cell20" $
+        `shouldBe` makeSampleGS X 4 [Cell22, Cell11]
+    it "After opponent plays in Cell20, play into the center cell" $
       (makeSampleGS X 9 [Cell20] >>= execTicTacToe doComputerMove)
-        `shouldBe` makeSampleGS X 4 [Cell20, Cell02]
-    it "plays into opposite corner, Cell20 after opponent plays in Cell02" $
+        `shouldBe` makeSampleGS X 4 [Cell20, Cell11]
+    it "After opponent plays in Cell02, play into the center cell" $
       (makeSampleGS X 9 [Cell02] >>= execTicTacToe doComputerMove)
-        `shouldBe` makeSampleGS X 4 [Cell02, Cell20]
+        `shouldBe` makeSampleGS X 4 [Cell02, Cell11]
 
     -- Make sure that doComputerMove returns an error when it can't or
     -- shouldn't make a move.
@@ -126,6 +126,13 @@ main = hspec $ do
       let moves = [Cell01, Cell22, Cell21, Cell11, Cell02, Cell00]
        in (makeSampleGS O 31 moves >>= execTicTacToe doComputerMove)
             `shouldSatisfy` isLeft
+
+    -- This sequence of moves broke the game in an earlier version
+    it "makes a move even when it doesn't have a good move to make" $
+      let moves = [Cell20, Cell02, Cell22, Cell21, Cell00]
+       in (makeSampleGS X 99 moves >>= execTicTacToe doComputerMove)
+            `shouldBeOneOf` [ makeSampleGS X 99 (moves ++ [Cell10])
+                            , makeSampleGS X 99 (moves ++ [Cell11]) ]
 
 
 -- ========================================================================= --
