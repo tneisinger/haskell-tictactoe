@@ -195,10 +195,8 @@ getSmartMoves gs =
   case (getWinMoves gs, getBlockMoves gs) of
     ([], [])          -> emptyCells $ gameBoard gs
     -- ^ if no win moves and no blocking moves, just return the available moves
-    ([], [c])         -> [c]
-    -- ^ if no win moves but one blocking move, the block is the smart move
-    ([], (_:_:_))     -> []
-    -- ^ if multiple cells need to be blocked, there are no smart moves to make
+    ([], blockMoves)  -> blockMoves
+    -- ^ if no win moves but there are blocking moves, blocking moves are best
     (winningMoves, _) -> winningMoves
     -- ^ if there are winning moves, return those
 
