@@ -133,6 +133,18 @@ main = hspec $ do
                             , makeSampleGS O n6 [Cell11]
                             ]
 
+    -- The edges are the worst cells to play into as the first move of the
+    -- game, so make sure that doComputerMove doesn't do that.
+    it "does not play into an edge in the first move of a game" $
+      forAll (arbitrary :: Gen (Int, Int, Int, Int, Int)) $
+        \(n1, n2, n3, n4, n5) ->
+          (makeSampleGS O n1 [] >>= execTicTacToe doComputerMove)
+            `shouldBeNoneOf` [ makeSampleGS O n2 [Cell01]
+                             , makeSampleGS O n3 [Cell10]
+                             , makeSampleGS O n4 [Cell12]
+                             , makeSampleGS O n5 [Cell21]
+                             ]
+
     -- If your opponent plays into a corner as the first move of the game, your
     -- best move is to play into the center.  Make sure that doComputerMove
     -- does that.
@@ -206,6 +218,12 @@ shouldBeOneOf x xs =
   if any (== x) xs
      then pure ()
      else expectationFailure "element not found in list by shouldBeOneOf"
+
+shouldBeNoneOf :: Eq a => a -> [a] -> Expectation
+shouldBeNoneOf x xs =
+  if any (== x) xs
+     then expectationFailure "element not found in list by shouldBeOneOf"
+     else pure ()
 
 isLeft :: Either a b -> Bool
 isLeft (Left _) = True
