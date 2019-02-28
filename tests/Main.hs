@@ -119,19 +119,29 @@ main = hspec $ do
            hasOutcome (Just (Winner Human))
 
   describe "doComputerMove" $ do
-
     -- The corners or the center are the best cells to play into as the first
-    -- move of the game, so make sure that doComputerMove does that.
-    it "plays into a corner or the center on first move of a game" $
-      forAll (arbitrary :: Gen (Int, Int, Int, Int, Int, Int)) $
-        \(n1, n2, n3, n4, n5, n6) ->
-          (makeSampleGS O n1 [] >>= execTicTacToe doComputerMove)
-            `shouldBeOneOf` [ makeSampleGS O n2 [Cell00]
-                            , makeSampleGS O n3 [Cell02]
-                            , makeSampleGS O n4 [Cell20]
-                            , makeSampleGS O n5 [Cell22]
-                            , makeSampleGS O n6 [Cell11]
-                            ]
+    -- move of the game, so make sure that doComputerMove does that.  This test
+    -- ensures that all the corners and the center do in fact get played into
+    -- as the first move in some cases.  Since the selection of the first move
+    -- should be a random selection of the corners and the center, we need to
+    -- make sure that each of those do actually get played some of the time.
+    it "plays into the corners or the center on first move of a game" $ do
+      ints <- generate $ resize 200 $ vector 200
+      n1 <- generate arbitrary
+      n2 <- generate arbitrary
+      n3 <- generate arbitrary
+      n4 <- generate arbitrary
+      n5 <- generate arbitrary
+      let f n = makeSampleGS O n [] >>= execTicTacToe doComputerMove
+          gss = rightsOnly $ f <$> ints
+          getCells gs = Map.keys (gameBoard gs)
+      (getCells <$> gss) `containsEachOf`
+        (getCells <$> rightsOnly [ makeSampleGS O n1 [Cell00]
+                                 , makeSampleGS O n2 [Cell02]
+                                 , makeSampleGS O n3 [Cell20]
+                                 , makeSampleGS O n4 [Cell22]
+                                 , makeSampleGS O n5 [Cell11]
+                                 ])
 
     -- The edges are the worst cells to play into as the first move of the
     -- game, so make sure that doComputerMove doesn't do that.
@@ -183,7 +193,8 @@ main = hspec $ do
          (makeSampleGS O n moves >>= execTicTacToe doComputerMove)
            `shouldSatisfy` isLeft
 
-    -- This sequence of moves broke the game in an earlier version
+    -- This sequence of moves broke the game in an earlier version, so
+    -- make sure that that doesn't happen again.
     it "makes a move even when it doesn't have a good move to make" $
       let moves = [Cell20, Cell02, Cell22, Cell21, Cell00]
        in forAll (arbitrary :: Gen (Int, Int, Int)) $ \(n1, n2, n3) ->
@@ -225,9 +236,20 @@ shouldBeNoneOf x xs =
      then expectationFailure "element not found in list by shouldBeOneOf"
      else pure ()
 
+containsEachOf :: Eq a => [a] -> [a] -> Expectation
+containsEachOf longList shortList =
+  if all (`elem` longList) shortList
+     then pure ()
+     else expectationFailure "not all elems of shortList found: containsEachOf"
+
 isLeft :: Either a b -> Bool
 isLeft (Left _) = True
 isLeft (Right _) = False
+
+rightsOnly :: [Either a b] -> [b]
+rightsOnly = foldr go []
+  where go (Right b) result = b:result
+        go (Left _) result = result
 
 
 -- For checkGSForOutcome
