@@ -110,17 +110,18 @@ getRandomBestCell function.
 getBestCellsEarlyGame :: GameState -> [Cell]
 getBestCellsEarlyGame gs =
   case (nextPlayer gs, Map.keys (gameBoard gs)) of
-    (Computer, [])       -> [Cell00, Cell02, Cell20, Cell22]
-    (Computer, [Cell00]) -> [Cell22]
-    (Computer, [Cell02]) -> [Cell20]
-    (Computer, [Cell20]) -> [Cell02]
-    (Computer, [Cell22]) -> [Cell00]
-    (Computer, [Cell11]) -> [Cell00, Cell02, Cell20, Cell22]
-    (Computer, [Cell01]) -> [Cell11]
-    (Computer, [Cell10]) -> [Cell11]
-    (Computer, [Cell12]) -> [Cell11]
-    (Computer, [Cell21]) -> [Cell11]
-    _                    -> []
+    (Computer, [])     -> [Cell00, Cell02, Cell20, Cell22]
+    (Computer, [cell]) -> getBestCellsSecondMove cell
+    _                  -> []
+
+{-| Get the best cells to play as the second move of the game if the first
+move of the game (your opponent's first move) was 'cell'.
+-}
+getBestCellsSecondMove :: Cell -> [Cell]
+getBestCellsSecondMove cell =
+  case cellToCellType cell of
+    Center -> cellTypeToCells Corner
+    _      -> cellTypeToCells Center
 
 {-| Based on the given GameState, return the list of Cells that would be
 best for the Computer if that cell were played into on the current turn.
