@@ -80,6 +80,20 @@ getRandomBestCell = do
     []        -> lift (getBestCells gs) >>= getRandomElement
     bestCells -> getRandomElement bestCells
 
+data CellType = Center | Corner | Edge
+  deriving (Eq, Show)
+
+cellTypeToCells :: CellType -> [Cell]
+cellTypeToCells Center = [Cell11]
+cellTypeToCells Corner = [Cell00, Cell02, Cell20, Cell22]
+cellTypeToCells Edge   = [Cell01, Cell10, Cell12, Cell21]
+
+cellToCellType :: Cell -> CellType
+cellToCellType Cell11 = Center
+cellToCellType cell = if cell `elem` cellTypeToCells Corner
+                         then Corner
+                         else Edge
+
 {-| If only zero or one marks are on the board and it is
 the Computer's turn, return the best cells for the Computer to play into. If it
 is not the Computer's turn, or if there is more than one mark on the board,
