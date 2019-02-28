@@ -87,28 +87,30 @@ main = hspec $ do
 
   describe "doComputerMove" $ do
 
-    -- The corners are the best cells to play into as the first move of the
-    -- game, so make sure that doComputerMove does that.
-    it "plays into a corner on first move of a game" $
+    -- The corners or the center are the best cells to play into as the first
+    -- move of the game, so make sure that doComputerMove does that.
+    it "plays into a corner or the center on first move of a game" $
       (makeSampleGS O 42 [] >>= execTicTacToe doComputerMove) `shouldBeOneOf`
        [ makeSampleGS O 11 [Cell00]
        , makeSampleGS O 88 [Cell02]
        , makeSampleGS O 19 [Cell20]
-       , makeSampleGS O 55 [Cell22] ]
+       , makeSampleGS O 55 [Cell22]
+       , makeSampleGS O 38 [Cell11]
+       ]
 
     -- If your opponent plays into a corner as the first move of the game, your
     -- best move is to play into the center.  Make sure that doComputerMove
     -- does that.
-    it "After opponent plays in Cell00, play into the center cell" $
+    it "If opponent starts in Cell00, play into the center cell" $
       (makeSampleGS X 9 [Cell00] >>= execTicTacToe doComputerMove)
         `shouldBe` makeSampleGS X 4 [Cell00, Cell11]
-    it "After opponent plays in Cell22, play into the center cell" $
+    it "If opponent starts in Cell22, play into the center cell" $
       (makeSampleGS X 9 [Cell22] >>= execTicTacToe doComputerMove)
         `shouldBe` makeSampleGS X 4 [Cell22, Cell11]
-    it "After opponent plays in Cell20, play into the center cell" $
+    it "If opponent starts in Cell20, play into the center cell" $
       (makeSampleGS X 9 [Cell20] >>= execTicTacToe doComputerMove)
         `shouldBe` makeSampleGS X 4 [Cell20, Cell11]
-    it "After opponent plays in Cell02, play into the center cell" $
+    it "If opponent starts in Cell02, play into the center cell" $
       (makeSampleGS X 9 [Cell02] >>= execTicTacToe doComputerMove)
         `shouldBe` makeSampleGS X 4 [Cell02, Cell11]
 
@@ -134,6 +136,15 @@ main = hspec $ do
             `shouldBeOneOf` [ makeSampleGS X 99 (moves ++ [Cell10])
                             , makeSampleGS X 99 (moves ++ [Cell11]) ]
 
+    -- If your opponent starts the game by playing in the center,
+    -- always play into a corner as your first move.
+    it "plays into a corner cell if opponent plays first move in center" $
+      (makeSampleGS X 99 [Cell11] >>= execTicTacToe doComputerMove)
+        `shouldBeOneOf` [ makeSampleGS X 99 [Cell11, Cell00]
+                        , makeSampleGS X 99 [Cell11, Cell02]
+                        , makeSampleGS X 99 [Cell11, Cell20]
+                        , makeSampleGS X 99 [Cell11, Cell22]
+                        ]
 
 -- ========================================================================= --
 --                              HELPER FUNCTIONS                             --
