@@ -110,7 +110,7 @@ getRandomBestCell function.
 getBestCellsEarlyGame :: GameState -> [Cell]
 getBestCellsEarlyGame gs =
   case (nextPlayer gs, Map.keys (gameBoard gs)) of
-    (Computer, [])     -> [Cell00, Cell02, Cell20, Cell22]
+    (Computer, [])     -> [Cell00, Cell02, Cell20, Cell22, Cell11]
     (Computer, [cell]) -> getBestCellsSecondMove cell
     _                  -> []
 
