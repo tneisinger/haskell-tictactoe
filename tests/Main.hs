@@ -127,21 +127,11 @@ main = hspec $ do
     -- make sure that each of those do actually get played some of the time.
     it "plays into the corners or the center on first move of a game" $ do
       ints <- generate $ resize 200 $ vector 200
-      n1 <- generate arbitrary
-      n2 <- generate arbitrary
-      n3 <- generate arbitrary
-      n4 <- generate arbitrary
-      n5 <- generate arbitrary
       let f n = makeSampleGS O n [] >>= execTicTacToe doComputerMove
-          gss = rightsOnly $ f <$> ints
+          gameStates = rightsOnly $ f <$> ints
           getCells gs = Map.keys (gameBoard gs)
-      (getCells <$> gss) `containsEachOf`
-        (getCells <$> rightsOnly [ makeSampleGS O n1 [Cell00]
-                                 , makeSampleGS O n2 [Cell02]
-                                 , makeSampleGS O n3 [Cell20]
-                                 , makeSampleGS O n4 [Cell22]
-                                 , makeSampleGS O n5 [Cell11]
-                                 ])
+      concat (getCells <$> gameStates) `containsEachOf`
+        [Cell00, Cell02, Cell20, Cell22, Cell11]
 
     -- The edges are the worst cells to play into as the first move of the
     -- game, so make sure that doComputerMove doesn't do that.
