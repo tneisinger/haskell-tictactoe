@@ -78,7 +78,7 @@ main = hspec $ do
     it "gives Nothing if the game isn't over yet" $
       forAll (arbitrary :: Gen Int) $ \n ->
         checkGSForOutcome <$> makeSampleGS X n [Cell00, Cell22, Cell11]
-          `shouldSatisfy` (hasOutcome Nothing)
+          `shouldSatisfy` hasOutcome Nothing
     it "gives (Just Draw) if all the cells are full and nobody won" $
       let moves = [Cell00, Cell22, Cell11, Cell02, Cell12, Cell10, Cell21,
                    Cell01, Cell20]
@@ -226,13 +226,13 @@ shouldBeR (Right a) b = a `shouldBe` b
 
 shouldBeOneOf :: Eq a => a -> [a] -> Expectation
 shouldBeOneOf x xs =
-  if any (== x) xs
+  if x `elem` xs
      then pure ()
      else expectationFailure "element not found in list by shouldBeOneOf"
 
 shouldBeNoneOf :: Eq a => a -> [a] -> Expectation
 shouldBeNoneOf x xs =
-  if any (== x) xs
+  if x `elem` xs
      then expectationFailure "element not found in list by shouldBeOneOf"
      else pure ()
 

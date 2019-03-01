@@ -90,7 +90,7 @@ isNextTurn board mark = if numMoreXs > 0 then mark == O else mark == X
 
 -- | Get the list of Cells that are currently empty
 emptyCells :: Board -> [Cell]
-emptyCells board = filter (flip Map.notMember board) [Cell00 ..]
+emptyCells board = filter (`Map.notMember` board) [Cell00 ..]
 
 -- | A predicate to determine if the given Line goes through the given Cell.
 lineCrosses :: Cell -> Line -> Bool
@@ -246,7 +246,7 @@ checkGSForOutcome gs =
   case checkForOutcome (gameBoard gs) of
     Nothing            -> Nothing
     Just Draw          -> Just Draw
-    Just (Winner mark) -> if mark == (computerMark gs)
+    Just (Winner mark) -> if mark == computerMark gs
                              then Just (Winner Computer)
                              else Just (Winner Human)
 
@@ -265,7 +265,7 @@ getWinningLines board =
 
 -- | Get a list of the Cells that make up the winning Lines
 getWinningCells :: Board -> [Cell]
-getWinningCells board = concatMap go $ map lineToCells (getWinningLines board)
+getWinningCells board = concatMap (go . lineToCells) (getWinningLines board)
   where go (c1, c2, c3) = [c1, c2, c3]
 
 -- | Create an initial GameState based on the Mark the human wants to play as.
@@ -307,7 +307,7 @@ performMove cell = do
     Just outcome -> lift $ Left (GameOver outcome)
     Nothing -> do
       let np = nextPlayer gs
-          mark = if np == Computer then (computerMark gs) else (humanMark gs)
+          mark = if np == Computer then computerMark gs else humanMark gs
       case fillCell cell mark (gameBoard gs) of
         Left err -> lift $ Left $ promoteMoveError gs err
         Right newBoard -> put gs { nextPlayer = flipPlayer np
@@ -317,5 +317,5 @@ performMove cell = do
 makeSampleGS :: Mark -> Int -> [Cell] -> Either (MoveError Player) GameState
 makeSampleGS initMark genInt cells = do
   let gs = initGameState initMark genInt
-      moves = sequence_ $ map performMove cells
+      moves = mapM_ performMove cells
   execStateT moves gs

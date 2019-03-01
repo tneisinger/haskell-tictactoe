@@ -57,9 +57,7 @@ showMoveErrorPrefix = "MoveError: "
 -- | Give a description of a MoveError when using show.
 instance Show a => Show (MoveError a) where
   show (CellFull cell mark) =
-    concat [ showMoveErrorPrefix
-           , show cell ++ " already contains " ++ show mark
-           ]
+    showMoveErrorPrefix ++ show cell ++ " already contains " ++ show mark
   show (GameOver outcome) =
     concat [ showMoveErrorPrefix
            , "No other moves can be made because the game is over.\n"
@@ -150,7 +148,7 @@ GameState as the return value.
 execTicTacToe :: TicTacToe a
               -> GameState
               -> Either (MoveError Player) GameState
-execTicTacToe t = execStateT t
+execTicTacToe = execStateT
 
 {-| Run a TicTacToe operation against a GameState and get back the result of
 that operation.
@@ -158,7 +156,7 @@ that operation.
 evalTicTacToe :: TicTacToe a
                -> GameState
                -> Either (MoveError Player) a
-evalTicTacToe t = evalStateT t
+evalTicTacToe = evalStateT
 
 
 {-| Run a TicTacToeIO operation against a GameState and get the resulting

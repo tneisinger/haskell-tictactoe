@@ -136,14 +136,14 @@ scoreCellChoices :: GameState -> Either (MoveError Player) [(Cell, Double)]
 scoreCellChoices gs = do
   tree <- makeChoiceTree ([], gs, Nothing)
   let cellCounts = getCellCounts tree
-      scoreCell = \(cell, counts) -> (cell, scoreOutcomeCount counts)
+      scoreCell (cell, counts) = (cell, scoreOutcomeCount counts)
   pure $ map scoreCell cellCounts
 
 type OutcomeCount = (Int, Int, Int)
 type CountMap = Map Cell OutcomeCount
 
 mergeCountMaps :: [CountMap] -> CountMap
-mergeCountMaps countMaps = Map.unionsWith addCounts countMaps
+mergeCountMaps = Map.unionsWith addCounts
 
 addCounts :: OutcomeCount -> OutcomeCount -> OutcomeCount
 addCounts (w1, d1, l1) (w2, d2, l2) = (w1 + w2, d1 + d2, l1 + l2)
@@ -187,7 +187,7 @@ makeChoiceTuple :: GameState
                 -> [Cell]
                 -> Maybe Cell
                 -> Either (MoveError Player) ChoiceTuple
-makeChoiceTuple gs cells Nothing = pure $ (cells, gs, checkGSForOutcome gs)
+makeChoiceTuple gs cells Nothing = pure (cells, gs, checkGSForOutcome gs)
 makeChoiceTuple gs cells (Just cell) = do
   gs' <- execStateT (performMove cell) gs
   predictedOutcome <- getPredictedOutcome gs'
@@ -199,7 +199,7 @@ getPredictedOutcome gs =
   case (getWinMoves gs, getBlockMoves gs, checkGSForOutcome gs) of
     (_, _, Just outcome) -> pure $ Just outcome
     ([], [], _) -> pure Nothing
-    ([], (_:_:_), _) -> pure (Just $ Winner $ flipPlayer $ nextPlayer gs)
+    ([], _:(_:_), _) -> pure (Just $ Winner $ flipPlayer $ nextPlayer gs)
     ([], [c], _) -> do
       gs' <- execStateT (performMove c) gs
       getPredictedOutcome gs'
@@ -225,7 +225,7 @@ getWinMoves gs = filter (isWinningMove gs) (emptyCells $ gameBoard gs)
 Cell.
 -}
 isWinningMove :: GameState -> Cell -> Bool
-isWinningMove gs cell = hasThreatLine (gameBoard gs) (nextMark gs) cell
+isWinningMove gs = hasThreatLine (gameBoard gs) (nextMark gs)
 
 {-| Get the list of Cells that the current player must play into to prevent
 the opponent from winning in that Cell on their next turn.
@@ -237,8 +237,7 @@ getBlockMoves gs = filter (isBlockingMove gs) (emptyCells $ gameBoard gs)
 winning the game on their next turn.
 -}
 isBlockingMove :: GameState -> Cell -> Bool
-isBlockingMove gs cell =
-  hasThreatLine (gameBoard gs) (flipMark (nextMark gs)) cell
+isBlockingMove gs = hasThreatLine (gameBoard gs) (flipMark (nextMark gs))
 
 {-| Return True if the given Cell is part of a Line where one more Mark equal
 to @threatMark@ would complete the line and win the game.
