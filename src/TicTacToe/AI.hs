@@ -171,10 +171,27 @@ scoreOutcome (Winner Computer) = (1,0,0)
 scoreOutcome Draw = (0,1,0)
 scoreOutcome (Winner Human) = (0,0,1)
 
+{-| ChoiceTuples are used used as the Node value in a ChoiceTree. The first
+element is a list of Cells, representing the sequence of moves that would need
+to be made to get to the GameState that is the second element of the tuple.
+The third element is the actual or predicted outcome of the game.
+-}
 type ChoiceTuple = ([Cell], GameState, Maybe (GameOutcome Player))
 
+{-| A ChoiceTree is a data structure that is used by the AI to select the
+best move(s) to make based on the current GameState.  The tree uses the
+current GameState as the root node.  The rest of the tree represents the
+different ways in which the game could proceed.
+-}
 type ChoiceTree = Tree ChoiceTuple
 
+{-| Make a data structure that explores the different possible directions
+a game could go in, starting from the provided ChoiceTuple.  The resulting
+tree will not explore EVERY possible sequence of moves.  This function
+uses the getObviousMoves function to ignore illogical move sequences, such
+as a player not playing a winning move, or not blocking an opponents winning
+move.
+-}
 makeChoiceTree :: ChoiceTuple -> Either (MoveError Player) ChoiceTree
 makeChoiceTree ct@(_, gs, maybeOutcome)
   | isJust maybeOutcome = pure $ Node ct []
