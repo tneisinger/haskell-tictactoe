@@ -80,14 +80,17 @@ getRandomBestCell = do
     []        -> lift (getBestCells gs) >>= getRandomElement
     bestCells -> getRandomElement bestCells
 
+-- | A type to model the three kinds of Cells in tic-tac-toe
 data CellType = Center | Corner | Edge
   deriving (Eq, Show)
 
+-- | Convert a CellType into the list of Cells of that type.
 cellTypeToCells :: CellType -> [Cell]
 cellTypeToCells Center = [Cell11]
 cellTypeToCells Corner = [Cell00, Cell02, Cell20, Cell22]
 cellTypeToCells Edge   = [Cell01, Cell10, Cell12, Cell21]
 
+-- | Get the CellType of a Cell
 cellToCellType :: Cell -> CellType
 cellToCellType Cell11 = Center
 cellToCellType cell = if cell `elem` cellTypeToCells Corner
@@ -132,6 +135,9 @@ getBestCells gs = do
   let bestScore = snd $ maximumBy (compare `on` snd) cellScores
   pure $ map fst $ filter (eqRelErr 0.0001 bestScore . snd) cellScores
 
+{-| Given a GameState, calculate a score for each empty cell.  A Cell with
+a higher score should represent a better move for the Computer.
+-}
 scoreCellChoices :: GameState -> Either (MoveError Player) [(Cell, Double)]
 scoreCellChoices gs = do
   tree <- makeChoiceTree ([], gs, Nothing)
@@ -139,15 +145,25 @@ scoreCellChoices gs = do
       scoreCell (cell, counts) = (cell, scoreOutcomeCount counts)
   pure $ map scoreCell cellCounts
 
+{-| A type for counting the number of wins, draws, and losses associated
+with making a given move.
+-}
 type OutcomeCount = (Int, Int, Int)
+
+{-| A mapping from Cells to the number of wins, draws, and losses that are
+found to be associated with making that move.
+-}
 type CountMap = Map Cell OutcomeCount
 
+-- | Merge a list of CountMaps down to one.
 mergeCountMaps :: [CountMap] -> CountMap
 mergeCountMaps = Map.unionsWith addCounts
 
+-- | Add two OutcomeCounts together
 addCounts :: OutcomeCount -> OutcomeCount -> OutcomeCount
 addCounts (w1, d1, l1) (w2, d2, l2) = (w1 + w2, d1 + d2, l1 + l2)
 
+-- | Calculate the percentage of wins, draw, and losses for an OutcomeCount
 getPercents :: OutcomeCount -> (Double, Double, Double)
 getPercents (w, d, l) = (w' / total, d' / total, l' / total)
   where w' = fromIntegral w
@@ -155,10 +171,19 @@ getPercents (w, d, l) = (w' / total, d' / total, l' / total)
         l' = fromIntegral l
         total = fromIntegral $ w + d + l
 
+{-| Convert an OutcomeCount into a Double so that we can select a move
+that maximizes for positive outcomes.  Subtract the percentage of losses
+from the percentage of wins.  The higher the number, the better for the AI.
+-}
 scoreOutcomeCount :: OutcomeCount -> Double
 scoreOutcomeCount count = w - l
   where (w, _, l) = getPercents count
 
+{-| From a ChoiceTree, get an OutcomeCount for each Cell that can be
+played into.  In other words, for each Cell in the resulting list, get the
+number of wins, draws, and losses that were found in the tree after that move
+was made.
+-}
 getCellCounts :: ChoiceTree -> [(Cell, OutcomeCount)]
 getCellCounts tree =
     Map.toList $ mergeCountMaps $ foldr go [] $ flatten tree
