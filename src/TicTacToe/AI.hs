@@ -191,6 +191,9 @@ getCellCounts tree =
           Map.fromList [(c, scoreOutcome outcome)] : countMaps
         go _ countMaps = countMaps
 
+{-| Create an OutcomeCount from a GameOutcome.  An OutcomeCount is of the
+format: (computer wins, draws, computer losses).
+-}
 scoreOutcome :: GameOutcome Player -> OutcomeCount
 scoreOutcome (Winner Computer) = (1,0,0)
 scoreOutcome Draw = (0,1,0)
