@@ -2,8 +2,7 @@ module TicTacToe.AI
        ( doComputerMove
        ) where
 
-import Control.Monad.Except (throwError)
-import Control.Monad.State (execStateT, get, put, lift)
+import Control.Monad.State (execStateT, get, gets, lift, put)
 import Data.Function (on)
 import Data.List (maximumBy)
 import Data.Map (Map)
@@ -14,25 +13,33 @@ import System.Random (randomR)
 
 import TicTacToe.Basic (checkForOutcome, flipPlayer, flipMark, nextMark,
                         getAllLineMarks, emptyCells, performMove)
-import TicTacToe.Types (Board, Cell, Player(..), GameState(..), Mark,
-                        GameOutcome(..), MoveError, Cell(..), TicTacToe,
+import TicTacToe.Types (Board, Cell, Difficulty(..), Player(..), GameState(..),
+                        Mark, GameOutcome(..), MoveError, Cell(..), TicTacToe,
                         MoveError(..))
 
 import qualified Data.Map as Map
 
 
-{-| Randomly select from among the best moves available, and make that move.
-
+{-| Based on the Difficulty found in the GameState, select and perform a move.
 This function will throw a MoveError if it is not the Computer's turn to play.
 -}
 doComputerMove :: TicTacToe ()
 doComputerMove = do
   gs <- get
-  case nextPlayer gs of
-    Human -> lift $ throwError (NotTurnOf Computer)
-    Computer -> do
-      cell <- getRandomBestCell
-      performMove cell
+  case (nextPlayer gs, difficulty gs) of
+    (Human, _) -> lift $ Left (NotTurnOf Computer)
+    (_, Easy)   -> doComputerMoveEasy
+    (_, Medium) -> doComputerMoveMedium
+    (_, Hard) -> doComputerMoveHard
+
+doComputerMoveHard :: TicTacToe ()
+doComputerMoveHard = getRandomBestCell >>= performMove
+
+doComputerMoveMedium :: TicTacToe ()
+doComputerMoveMedium = getRandomMediumCell >>= performMove
+
+doComputerMoveEasy :: TicTacToe ()
+doComputerMoveEasy = getRandomEasyCell >>= performMove
 
 {-| Get a random Int in the TicTacToe monad.  The StateT part of the TicTacToe
 monad uses GameState as its State value.  All GameStates contain a StdGen,
@@ -79,6 +86,12 @@ getRandomBestCell = do
   case getBestCellsEarlyGame gs of
     []        -> lift (getBestCells gs) >>= getRandomElement
     bestCells -> getRandomElement bestCells
+
+getRandomMediumCell :: TicTacToe Cell
+getRandomMediumCell = get >>= getRandomElement . getObviousMoves
+
+getRandomEasyCell :: TicTacToe Cell
+getRandomEasyCell = gets gameBoard >>= getRandomElement . emptyCells
 
 -- | A type to model the three kinds of Cells in tic-tac-toe
 data CellType = Center | Corner | Edge

@@ -4,7 +4,7 @@ import Control.Monad.State (get, liftIO)
 import Data.Char (toUpper)
 import System.IO (hFlush, stdout)
 
-import TicTacToe.Exports (Cell, GameOutcome(..),
+import TicTacToe.Exports (Cell, Difficulty(..), GameOutcome(..),
                           GameState(gameBoard, nextPlayer), GameOutcome(..),
                           Mark, Player(..), TicTacToeIO, checkForOutcome,
                           doComputerMove, doHumanMove, emptyCells,
@@ -16,9 +16,11 @@ import TicTacToe.Exports (Cell, GameOutcome(..),
 main :: IO ()
 main = do
   putStrLn ""
+  d <- askWhichDifficulty
+  putStrLn ""
   mark <- askWhichMark
   putStrLn ""
-  moveErrorOrUnit <- evalTicTacToeIO textGameLoop (initGameState mark 42)
+  moveErrorOrUnit <- evalTicTacToeIO textGameLoop (initGameState mark 42 d)
   case moveErrorOrUnit of
     Left err -> print err
     _        -> pure ()
@@ -47,6 +49,21 @@ askWhichMark = do
   case reads (map toUpper response) of
     [] -> putStrLn "Please enter an X or an O..." >> askWhichMark
     (mark, _):_ -> return mark
+
+-- | Ask the player what difficulty he/she would like to play against
+askWhichDifficulty :: IO Difficulty
+askWhichDifficulty = do
+  putStrLn "Enter a number [1-3] to select a difficulty:"
+  putStrLn "  1 - Easy"
+  putStrLn "  2 - Medium"
+  putStrLn "  3 - Hard"
+  response <- prompt "  > "
+  case (reads response :: [(Int, String)]) of
+    (1, _):_ -> pure Easy
+    (2, _):_ -> pure Medium
+    (3, _):_ -> pure Hard
+    _ -> putStrLn "Please enter a number (1-3)..." >> askWhichDifficulty
+
 
 {-| Ask the player which Cell they would like to play into.  Return the Cell
 chosen by the player.

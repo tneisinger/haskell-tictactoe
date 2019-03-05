@@ -25,8 +25,9 @@ import Control.Monad.State (execStateT, put, get, lift)
 import Data.Maybe (isJust)
 import System.Random (mkStdGen)
 
-import TicTacToe.Types (GameState(..), Cell(..), Player(..), MoveError(..),
-                        Mark(..), TicTacToe, Line(..), Board, GameOutcome(..))
+import TicTacToe.Types (Difficulty, GameState(..), Cell(..), Player(..),
+                        MoveError(..), Mark(..), TicTacToe, Line(..), Board,
+                        GameOutcome(..))
 
 import qualified Data.Map as Map
 
@@ -269,23 +270,25 @@ getWinningCells board = concatMap (go . lineToCells) (getWinningLines board)
   where go (c1, c2, c3) = [c1, c2, c3]
 
 -- | Create an initial GameState based on the Mark the human wants to play as.
-initGameState :: Mark ->  Int -> GameState
-initGameState X i = GameState { stdGen = mkStdGen i
-                              , nextPlayer = Human
-                              , computerMark = O
-                              , gameBoard = blankBoard
-                              }
-initGameState O i = GameState { stdGen = mkStdGen i
-                              , nextPlayer = Computer
-                              , computerMark = X
-                              , gameBoard = blankBoard
-                              }
+initGameState :: Mark -> Int -> Difficulty -> GameState
+initGameState X i d = GameState { stdGen = mkStdGen i
+                                , difficulty = d
+                                , nextPlayer = Human
+                                , computerMark = O
+                                , gameBoard = blankBoard
+                                }
+initGameState O i d = GameState { stdGen = mkStdGen i
+                                , difficulty = d
+                                , nextPlayer = Computer
+                                , computerMark = X
+                                , gameBoard = blankBoard
+                                }
 
 {-| Reset the GameState to a new game, but keeping the StdGen so that
 the randomness will carry forward into the new game.
 -}
-newGameState :: GameState -> Mark -> GameState
-newGameState gs mark = (initGameState mark 0) { stdGen = stdGen gs }
+newGameState :: GameState -> Mark -> Difficulty -> GameState
+newGameState gs mark d = (initGameState mark 0 d) { stdGen = stdGen gs }
 
 {-| Return a StateT that will either play the correct Mark value into the given
 Cell, or will return an 'MoveError Player'.
@@ -314,8 +317,12 @@ performMove cell = do
                                  , gameBoard = newBoard }
 
 -- | A convenience function for making arbitrary GameStates
-makeSampleGS :: Mark -> Int -> [Cell] -> Either (MoveError Player) GameState
-makeSampleGS initMark genInt cells = do
-  let gs = initGameState initMark genInt
+makeSampleGS :: Mark
+             -> Int
+             -> [Cell]
+             -> Difficulty
+             -> Either (MoveError Player) GameState
+makeSampleGS initMark genInt cells d = do
+  let gs = initGameState initMark genInt d
       moves = mapM_ performMove cells
   execStateT moves gs

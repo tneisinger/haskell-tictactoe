@@ -18,44 +18,44 @@ main = hspec $ do
   describe "makeSampleGS" $ do
     it "nextPlayer is Computer with inputs: O n []" $
       forAll (arbitrary :: Gen Int) $ \n ->
-        (nextPlayer <$> makeSampleGS O n []) `shouldBeR` Computer
+        (nextPlayer <$> makeSampleGS O n [] Hard) `shouldBeR` Computer
     it "nextPlayer is Human with inputs: X n []" $
       forAll (arbitrary :: Gen Int) $ \n ->
-        (nextPlayer <$> makeSampleGS X n []) `shouldBeR` Human
+        (nextPlayer <$> makeSampleGS X n [] Hard) `shouldBeR` Human
     it "nextPlayer should be Human with inputs: O n [Cell10]" $
       forAll (arbitrary :: Gen Int) $ \n ->
-        (nextPlayer <$> makeSampleGS O n [Cell10]) `shouldBeR` Human
+        (nextPlayer <$> makeSampleGS O n [Cell10] Hard) `shouldBeR` Human
     it "nextPlayer should be Computer with inputs: X n [Cell10]" $
       forAll (arbitrary :: Gen Int) $ \n ->
-        (nextPlayer <$> makeSampleGS X n [Cell10]) `shouldBeR` Computer
+        (nextPlayer <$> makeSampleGS X n [Cell10] Hard) `shouldBeR` Computer
     it "computerMark is X with inputs: O n []" $
       forAll (arbitrary :: Gen Int) $ \n ->
-        (computerMark <$> makeSampleGS O n []) `shouldBeR` X
+        (computerMark <$> makeSampleGS O n [] Hard) `shouldBeR` X
     it "computerMark is O with inputs: X n []" $
       forAll (arbitrary :: Gen Int) $ \n ->
-        (computerMark <$> makeSampleGS X n []) `shouldBeR` O
+        (computerMark <$> makeSampleGS X n [] Hard) `shouldBeR` O
     it "should equal initGameState X n2 with inputs: X n1 []" $
       forAll (arbitrary :: Gen (Int, Int)) $ \(n1, n2) ->
-        makeSampleGS X n1 [] `shouldBeR` initGameState X n2
+        makeSampleGS X n1 [] Hard `shouldBeR` initGameState X n2 Hard
     it "should equal initGameState O n2 with inputs: O n1 []" $
       forAll (arbitrary :: Gen (Int, Int)) $ \(n1, n2) ->
-        makeSampleGS O n1 [] `shouldBeR` initGameState O n2
+        makeSampleGS O n1 [] Hard `shouldBeR` initGameState O n2 Hard
     it "shouldn't matter if the StdGen seeds differ" $
       forAll (arbitrary :: Gen (Int, Int)) $ \(n1, n2) ->
-        makeSampleGS O n1 [] `shouldBeR` initGameState O n2
+        makeSampleGS O n1 [] Hard `shouldBeR` initGameState O n2 Hard
     it "emptyCells should be all cells with inputs: X n []" $
       forAll (arbitrary :: Gen Int) $ \n ->
-        makeSampleGS X n [] `emptyCellsAre` [Cell00 ..]
+        makeSampleGS X n [] Hard `emptyCellsAre` [Cell00 ..]
     it "emptyCells should be all but Cell00 with inputs: X n [Cell00]" $
       forAll (arbitrary :: Gen Int) $ \n ->
-        makeSampleGS X n [Cell00] `emptyCellsAre` [Cell01 ..]
+        makeSampleGS X n [Cell00] Hard `emptyCellsAre` [Cell01 ..]
     it "emptyCells should be all but Cell11 with inputs: X n [Cell11]" $
       forAll (arbitrary :: Gen Int) $ \n ->
-        makeSampleGS X n [Cell11] `emptyCellsAre`
+        makeSampleGS X n [Cell11] Hard `emptyCellsAre`
          ([Cell00 .. Cell10] ++ [Cell12 .. Cell22])
     it "Map.toList board should have [(Cell00, X), (Cell21, O)]" $
       forAll (arbitrary :: Gen Int) $ \n ->
-        makeSampleGS X n [Cell00, Cell21] `sampleBoardHas`
+        makeSampleGS X n [Cell00, Cell21] Hard `sampleBoardHas`
           [(Cell00, X), (Cell21, O)]
     it "Board should contain all listed moves" $
       let moves = [Cell00, Cell22, Cell11, Cell20, Cell21, Cell01,
@@ -64,58 +64,58 @@ main = hspec $ do
                  (Cell21, X), (Cell01, O), (Cell12, X), (Cell10, O),
                  (Cell02, X)]
        in forAll (arbitrary :: Gen Int) $ \n ->
-         makeSampleGS X n moves `sampleBoardHas` res
+         makeSampleGS X n moves Hard `sampleBoardHas` res
     it "gives an error if you try to play into a full cell" $
       let moves = [Cell00, Cell22, Cell00, Cell20]
        in forAll (arbitrary :: Gen Int) $ \n ->
-         makeSampleGS X n moves `shouldSatisfy` isLeft
+         makeSampleGS X n moves Hard `shouldSatisfy` isLeft
     it "gives an error if you try to play a move after the game is over" $
       let moves = [Cell11, Cell20, Cell00, Cell22, Cell10, Cell21, Cell02]
        in forAll (arbitrary :: Gen Int) $ \n ->
-         makeSampleGS X n moves `shouldSatisfy` isLeft
+         makeSampleGS X n moves Hard `shouldSatisfy` isLeft
 
   describe "checkForOutcome" $ do
     it "gives Nothing if the game isn't over yet" $
       forAll (arbitrary :: Gen Int) $ \n ->
-        checkForOutcome <$> makeSampleGS X n [Cell00, Cell22, Cell11]
+        checkForOutcome <$> makeSampleGS X n [Cell00, Cell22, Cell11] Hard
           `shouldSatisfy` hasOutcome Nothing
     it "gives (Just Draw) if all the cells are full and nobody won" $
       let moves = [Cell00, Cell22, Cell11, Cell02, Cell12, Cell10, Cell21,
                    Cell01, Cell20]
        in forAll (arbitrary :: Gen Int) $ \n ->
-         checkForOutcome <$> makeSampleGS X n moves `shouldSatisfy`
+         checkForOutcome <$> makeSampleGS X n moves Hard `shouldSatisfy`
             hasOutcome (Just Draw)
     it "gives (Just (Winner Human)) if Human wins as X" $
       let moves = [Cell00, Cell22, Cell01, Cell12, Cell02]
        in forAll (arbitrary :: Gen Int) $ \n ->
-         checkForOutcome <$> makeSampleGS X n moves `shouldSatisfy`
+         checkForOutcome <$> makeSampleGS X n moves Hard `shouldSatisfy`
             hasOutcome (Just (Winner Human))
     it "gives (Just (Winner Human)) if Human wins as O" $
       let moves = [Cell01, Cell22, Cell21, Cell11, Cell02, Cell00]
        in forAll (arbitrary :: Gen Int) $ \n ->
-         checkForOutcome <$> makeSampleGS O n moves `shouldSatisfy`
+         checkForOutcome <$> makeSampleGS O n moves Hard `shouldSatisfy`
             hasOutcome (Just (Winner Human))
     it "gives (Just (Winner Computer)) if Computer wins as X" $
       let moves = [Cell00, Cell22, Cell01, Cell12, Cell02]
        in forAll (arbitrary :: Gen Int) $ \n ->
-         checkForOutcome <$> makeSampleGS O n moves `shouldSatisfy`
+         checkForOutcome <$> makeSampleGS O n moves Hard `shouldSatisfy`
             hasOutcome (Just (Winner Computer))
     it "gives (Just (Winner Computer)) if Computer wins as O" $
       let moves = [Cell01, Cell22, Cell21, Cell11, Cell02, Cell00]
        in forAll (arbitrary :: Gen Int) $ \n ->
-         checkForOutcome <$> makeSampleGS X n moves `shouldSatisfy`
+         checkForOutcome <$> makeSampleGS X n moves Hard `shouldSatisfy`
            hasOutcome (Just (Winner Computer))
     it "gives (Just (Winner Computer)) if Computer wins on full board" $
       let moves = [Cell01, Cell22, Cell21, Cell11, Cell02, Cell12, Cell10,
                    Cell20, Cell00]
        in forAll (arbitrary :: Gen Int) $ \n ->
-         checkForOutcome <$> makeSampleGS O n moves `shouldSatisfy`
+         checkForOutcome <$> makeSampleGS O n moves Hard `shouldSatisfy`
            hasOutcome (Just (Winner Computer))
     it "gives (Just (Winner Human)) if Human wins on full board" $
       let moves = [Cell01, Cell22, Cell21, Cell11, Cell02, Cell12, Cell10,
                    Cell20, Cell00]
        in forAll (arbitrary :: Gen Int) $ \n ->
-         checkForOutcome <$> makeSampleGS X n moves `shouldSatisfy`
+         checkForOutcome <$> makeSampleGS X n moves Hard `shouldSatisfy`
            hasOutcome (Just (Winner Human))
 
   describe "doComputerMove" $ do
@@ -127,7 +127,7 @@ main = hspec $ do
     -- make sure that each of those do actually get played some of the time.
     it "plays into the corners or the center on first move of a game" $ do
       ints <- generate $ resize 200 $ vector 200
-      let f n = makeSampleGS O n [] >>= execTicTacToe doComputerMove
+      let f n = makeSampleGS O n [] Hard >>= execTicTacToe doComputerMove
           gameStates = rightsOnly $ f <$> ints
           getCells gs = Map.keys (gameBoard gs)
       concat (getCells <$> gameStates) `containsEachOf`
@@ -138,11 +138,11 @@ main = hspec $ do
     it "does not play into an edge in the first move of a game" $
       forAll (arbitrary :: Gen (Int, Int, Int, Int, Int)) $
         \(n1, n2, n3, n4, n5) ->
-          (makeSampleGS O n1 [] >>= execTicTacToe doComputerMove)
-            `shouldBeNoneOf` [ makeSampleGS O n2 [Cell01]
-                             , makeSampleGS O n3 [Cell10]
-                             , makeSampleGS O n4 [Cell12]
-                             , makeSampleGS O n5 [Cell21]
+          (makeSampleGS O n1 [] Hard >>= execTicTacToe doComputerMove)
+            `shouldBeNoneOf` [ makeSampleGS O n2 [Cell01] Hard
+                             , makeSampleGS O n3 [Cell10] Hard
+                             , makeSampleGS O n4 [Cell12] Hard
+                             , makeSampleGS O n5 [Cell21] Hard
                              ]
 
     -- If your opponent plays into a corner as the first move of the game, your
@@ -150,37 +150,37 @@ main = hspec $ do
     -- does that.
     it "If opponent starts in Cell00, play into the center cell" $
       forAll (arbitrary :: Gen (Int, Int)) $ \(n1, n2) ->
-        (makeSampleGS X n1 [Cell00] >>= execTicTacToe doComputerMove)
-          `shouldBe` makeSampleGS X n2 [Cell00, Cell11]
+        (makeSampleGS X n1 [Cell00] Hard >>= execTicTacToe doComputerMove)
+          `shouldBe` makeSampleGS X n2 [Cell00, Cell11] Hard
     it "If opponent starts in Cell22, play into the center cell" $
       forAll (arbitrary :: Gen (Int, Int)) $ \(n1, n2) ->
-        (makeSampleGS X n1 [Cell22] >>= execTicTacToe doComputerMove)
-          `shouldBe` makeSampleGS X n2 [Cell22, Cell11]
+        (makeSampleGS X n1 [Cell22] Hard >>= execTicTacToe doComputerMove)
+          `shouldBe` makeSampleGS X n2 [Cell22, Cell11] Hard
     it "If opponent starts in Cell20, play into the center cell" $
       forAll (arbitrary :: Gen (Int, Int)) $ \(n1, n2) ->
-        (makeSampleGS X n1 [Cell20] >>= execTicTacToe doComputerMove)
-          `shouldBe` makeSampleGS X n2 [Cell20, Cell11]
+        (makeSampleGS X n1 [Cell20] Hard >>= execTicTacToe doComputerMove)
+          `shouldBe` makeSampleGS X n2 [Cell20, Cell11] Hard
     it "If opponent starts in Cell02, play into the center cell" $
       forAll (arbitrary :: Gen (Int, Int)) $ \(n1, n2) ->
-        (makeSampleGS X n1 [Cell02] >>= execTicTacToe doComputerMove)
-          `shouldBe` makeSampleGS X n2 [Cell02, Cell11]
+        (makeSampleGS X n1 [Cell02] Hard >>= execTicTacToe doComputerMove)
+          `shouldBe` makeSampleGS X n2 [Cell02, Cell11] Hard
 
     -- Make sure that doComputerMove returns an error when it can't or
     -- shouldn't make a move.
     it "won't make a move if it is not Computer's turn" $
       forAll (arbitrary :: Gen Int) $ \n ->
-        (makeSampleGS X n [] >>= execTicTacToe doComputerMove) `shouldSatisfy`
-          isLeft
+        (makeSampleGS X n [] Hard >>= execTicTacToe doComputerMove)
+          `shouldSatisfy` isLeft
     it "won't make a move if the board is full" $
       let moves = [Cell00, Cell22, Cell11, Cell02, Cell12, Cell10, Cell21,
                    Cell01, Cell20]
        in forAll (arbitrary :: Gen Int) $ \n ->
-         (makeSampleGS X n moves >>= execTicTacToe doComputerMove)
+         (makeSampleGS X n moves Hard >>= execTicTacToe doComputerMove)
            `shouldSatisfy` isLeft
     it "won't make a move if the Human has already won the game" $
       let moves = [Cell01, Cell22, Cell21, Cell11, Cell02, Cell00]
        in forAll (arbitrary :: Gen Int) $ \n ->
-         (makeSampleGS O n moves >>= execTicTacToe doComputerMove)
+         (makeSampleGS O n moves Hard >>= execTicTacToe doComputerMove)
            `shouldSatisfy` isLeft
 
     -- This sequence of moves broke the game in an earlier version, so
@@ -188,20 +188,20 @@ main = hspec $ do
     it "makes a move even when it doesn't have a good move to make" $
       let moves = [Cell20, Cell02, Cell22, Cell21, Cell00]
        in forAll (arbitrary :: Gen (Int, Int, Int)) $ \(n1, n2, n3) ->
-         (makeSampleGS X n1 moves >>= execTicTacToe doComputerMove)
-            `shouldBeOneOf` [ makeSampleGS X n2 (moves ++ [Cell10])
-                            , makeSampleGS X n3 (moves ++ [Cell11]) ]
+         (makeSampleGS X n1 moves Hard >>= execTicTacToe doComputerMove)
+            `shouldBeOneOf` [ makeSampleGS X n2 (moves ++ [Cell10]) Hard
+                            , makeSampleGS X n3 (moves ++ [Cell11]) Hard ]
 
     -- If your opponent starts the game by playing in the center,
     -- always play into a corner as your first move.
     it "plays into a corner cell if opponent plays first move in center" $
       forAll (arbitrary :: Gen (Int, Int, Int, Int, Int)) $
         \(n1, n2, n3, n4, n5) ->
-          (makeSampleGS X n1 [Cell11] >>= execTicTacToe doComputerMove)
-            `shouldBeOneOf` [ makeSampleGS X n2 [Cell11, Cell00]
-                            , makeSampleGS X n3 [Cell11, Cell02]
-                            , makeSampleGS X n4 [Cell11, Cell20]
-                            , makeSampleGS X n5 [Cell11, Cell22]
+          (makeSampleGS X n1 [Cell11] Hard >>= execTicTacToe doComputerMove)
+            `shouldBeOneOf` [ makeSampleGS X n2 [Cell11, Cell00] Hard
+                            , makeSampleGS X n3 [Cell11, Cell02] Hard
+                            , makeSampleGS X n4 [Cell11, Cell20] Hard
+                            , makeSampleGS X n5 [Cell11, Cell22] Hard
                             ]
 
 -- ========================================================================= --

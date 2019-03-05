@@ -2,6 +2,7 @@ module TicTacToe.Exports
        ( -- * Types
          Board
        , Cell(..)
+       , Difficulty(..)
        , GameOutcome(..)
        , GameState(computerMark, gameBoard, nextPlayer)
        , Mark(..)
@@ -36,7 +37,7 @@ import TicTacToe.Basic (checkForOutcome, doHumanMove, emptyCells,
                         initGameState, makeSampleGS, maybeIntToCell,
                         newGameState, showBoard, showBoardWithCellNums,
                         showCellContents)
-import TicTacToe.Types (Board, Cell(..), GameOutcome(..),
+import TicTacToe.Types (Board, Cell(..), Difficulty(..), GameOutcome(..),
                         GameState(nextPlayer, computerMark, gameBoard),
                         Mark(..), Player(..), TicTacToe, TicTacToeIO,
                         evalTicTacToe, evalTicTacToeIO, execTicTacToe,

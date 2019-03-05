@@ -1,6 +1,7 @@
 module TicTacToe.Types
        ( -- * Data types
          Cell (..)
+       , Difficulty(..)
        , GameOutcome (..)
        , GameState (..)
        , Line (..)
@@ -93,16 +94,20 @@ data Line = Line00to02
 data Player = Computer | Human
   deriving (Eq, Show)
 
+data Difficulty = Easy | Medium | Hard
+  deriving (Eq, Show)
+
 -- | The State of a tic-tac-toe game.
 data GameState = GameState { stdGen :: StdGen
+                           , difficulty :: Difficulty
                            , nextPlayer :: Player
                            , computerMark :: Mark
                            , gameBoard :: Board
                            } deriving (Show)
 
 instance Eq GameState where
-  GameState _ p1 m1 b1 == GameState _ p2 m2 b2 =
-    p1 == p2 && m1 == m2 && b1 == b2
+  GameState _ d1 p1 m1 b1 == GameState _ d2 p2 m2 b2 =
+    d1 == d2 && p1 == p2 && m1 == m2 && b1 == b2
 
 {-| A Type representing the outcome of a game. This will be used as either
 'GameOutcome Mark' or 'GameOutcome Player'.
