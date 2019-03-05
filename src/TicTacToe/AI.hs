@@ -209,9 +209,9 @@ getSmartMoves :: GameState -> [Cell]
 getSmartMoves gs =
   case (getWinMoves gs, getBlockMoves gs) of
     ([], [])          -> emptyCells $ gameBoard gs
-    -- ^ if no win moves and no blocking moves, just return the available moves
+    -- ^ if no winning moves and no blocking moves, return all available moves
     ([], blockMoves)  -> blockMoves
-    -- ^ if no win moves but there are blocking moves, blocking moves are best
+    -- ^ if no win moves but there are blocking moves, return blocking moves
     (winningMoves, _) -> winningMoves
     -- ^ if there are winning moves, return those
 
@@ -225,7 +225,7 @@ getWinMoves gs = filter (isWinningMove gs) (emptyCells $ gameBoard gs)
 Cell.
 -}
 isWinningMove :: GameState -> Cell -> Bool
-isWinningMove gs = hasThreatLine (gameBoard gs) (nextMark gs)
+isWinningMove gs = isThreatCell (gameBoard gs) (nextMark gs)
 
 {-| Get the list of Cells that the current player must play into to prevent
 the opponent from winning in that Cell on their next turn.
@@ -237,12 +237,13 @@ getBlockMoves gs = filter (isBlockingMove gs) (emptyCells $ gameBoard gs)
 winning the game on their next turn.
 -}
 isBlockingMove :: GameState -> Cell -> Bool
-isBlockingMove gs = hasThreatLine (gameBoard gs) (flipMark (nextMark gs))
+isBlockingMove gs = isThreatCell (gameBoard gs) (flipMark (nextMark gs))
 
 {-| Return True if the given Cell is part of a Line where one more Mark equal
 to @threatMark@ would complete the line and win the game.
 -}
-hasThreatLine :: Board -> Mark -> Cell -> Bool
-hasThreatLine board threatMark cell = any isThreat $ getAllLineMarks board cell
-    where threatsOnly (m1, m2, m3) = filter (== Just threatMark) [m1, m2, m3]
-          isThreat marks = length (threatsOnly marks) == 2
+isThreatCell :: Board -> Mark -> Cell -> Bool
+isThreatCell board threatMark cell =
+    cell `Map.notMember` board && (any isThreat $ getAllLineMarks board cell)
+  where threatsOnly (m1, m2, m3) = filter (== Just threatMark) [m1, m2, m3]
+        isThreat marks = length (threatsOnly marks) == 2
