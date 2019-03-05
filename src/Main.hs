@@ -6,11 +6,11 @@ import System.IO (hFlush, stdout)
 
 import TicTacToe.Exports (Cell, Difficulty(..), GameOutcome(..),
                           GameState(gameBoard, nextPlayer), GameOutcome(..),
-                          Mark, Player(..), TicTacToeIO, checkForOutcome,
-                          doComputerMove, doHumanMove, emptyCells,
-                          evalTicTacToeIO, humanMark, initGameState,
-                          liftTicTacToe, maybeIntToCell, showBoard,
-                          showBoardWithCellNums)
+                          Mark, Player(..), TicTacToeIO, allDifficulties,
+                          checkForOutcome, doComputerMove, doHumanMove,
+                          emptyCells, evalTicTacToeIO, humanMark,
+                          initGameState, liftTicTacToe, maybeIntToCell,
+                          showBoard, showBoardWithCellNums)
 
 
 main :: IO ()
@@ -50,19 +50,22 @@ askWhichMark = do
     [] -> putStrLn "Please enter an X or an O..." >> askWhichMark
     (mark, _):_ -> return mark
 
--- | Ask the player what difficulty he/she would like to play against
+-- | Ask the player which difficulty he/she would like to play against
 askWhichDifficulty :: IO Difficulty
 askWhichDifficulty = do
-  putStrLn "Enter a number [1-3] to select a difficulty:"
-  putStrLn "  1 - Easy"
-  putStrLn "  2 - Medium"
-  putStrLn "  3 - Hard"
-  response <- prompt "  > "
-  case (reads response :: [(Int, String)]) of
-    (1, _):_ -> pure Easy
-    (2, _):_ -> pure Medium
-    (3, _):_ -> pure Hard
-    _ -> putStrLn "Please enter a number (1-3)..." >> askWhichDifficulty
+    putStrLn "Enter a number to select a difficulty:"
+    mapM_ (\(n,d) -> putStrLn $ "  " ++ n ++ " - " ++ show d) numsAndDifs
+    response <- prompt "  > "
+    case (reads response :: [(Int, String)]) of
+      (n, _):_ -> if n > 0 && n <= length allDifficulties
+                     then pure $ allDifficulties !! (n - 1)
+                     else tryAgain
+      _ -> tryAgain
+  where numDifs = show $ length allDifficulties
+        numsAndDifs = zip (map show [(1 :: Int) ..]) allDifficulties
+        tryAgain = do
+          putStrLn $ "Please enter a number between 1 and " ++ numDifs
+          askWhichDifficulty
 
 
 {-| Ask the player which Cell they would like to play into.  Return the Cell
