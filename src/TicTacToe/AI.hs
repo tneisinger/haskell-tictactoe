@@ -256,11 +256,11 @@ predictOutcome gs =
                                  gs' <- execStateT (performMove blockMove) gs
                                  predictOutcome gs'
       -- ^ If there is one blocking move, do that move and recurse.
-      (False, _, _)        -> pure $ Just $ Winner $ opponent
+      (False, _, _)        -> pure $ Just $ Winner opponent
       -- ^ If there are many moves that need blocked, current player has lost.
-      (True, _, _)         -> pure $ Just $ Winner $ currentPlayer
+      (True, _, _)         -> pure $ Just $ Winner currentPlayer
       -- ^ If there are winning moves, current player has won.
-  where winMoveExists = length (getWinningMoves gs) > 0
+  where winMoveExists = not $ null $ getWinningMoves gs
         numBlockMoves = length $ getBlockingMoves gs
         currentPlayer = nextPlayer gs
         opponent      = flipPlayer currentPlayer
@@ -312,6 +312,6 @@ to @threatMark@ would complete the line and win the game.
 -}
 isThreatCell :: Board -> Mark -> Cell -> Bool
 isThreatCell board threatMark cell =
-    cell `Map.notMember` board && (any isThreat $ getAllLineMarks board cell)
+    cell `Map.notMember` board && any isThreat (getAllLineMarks board cell)
   where threatsOnly (m1, m2, m3) = filter (== Just threatMark) [m1, m2, m3]
         isThreat marks = length (threatsOnly marks) == 2
