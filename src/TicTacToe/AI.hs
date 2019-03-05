@@ -196,7 +196,7 @@ makeChoiceTuple gs cells (Just cell) = do
 getPredictedOutcome :: GameState
                     -> Either (MoveError Player) (Maybe (GameOutcome Player))
 getPredictedOutcome gs =
-  case (getWinMoves gs, getBlockMoves gs, checkGSForOutcome gs) of
+  case (getWinningMoves gs, getBlockingMoves gs, checkGSForOutcome gs) of
     (_, _, Just outcome) -> pure $ Just outcome
     ([], [], _) -> pure Nothing
     ([], _:(_:_), _) -> pure (Just $ Winner $ flipPlayer $ nextPlayer gs)
@@ -207,10 +207,10 @@ getPredictedOutcome gs =
 
 getSmartMoves :: GameState -> [Cell]
 getSmartMoves gs =
-  case (getWinMoves gs, getBlockMoves gs) of
+  case (getWinningMoves gs, getBlockingMoves gs) of
     ([], [])          -> emptyCells $ gameBoard gs
     -- ^ if no winning moves and no blocking moves, return all available moves
-    ([], blockMoves)  -> blockMoves
+    ([], blockingMoves)  -> blockingMoves
     -- ^ if no win moves but there are blocking moves, return blocking moves
     (winningMoves, _) -> winningMoves
     -- ^ if there are winning moves, return those
@@ -218,8 +218,8 @@ getSmartMoves gs =
 {-| Get the list of Cells that the nextPlayer could play into to win the game
 on their current turn.
 -}
-getWinMoves :: GameState -> [Cell]
-getWinMoves gs = filter (isWinningMove gs) (emptyCells $ gameBoard gs)
+getWinningMoves :: GameState -> [Cell]
+getWinningMoves gs = filter (isWinningMove gs) (emptyCells $ gameBoard gs)
 
 {-| Return True if the nextPlayer would win the game by playing into the given
 Cell.
@@ -230,8 +230,8 @@ isWinningMove gs = isThreatCell (gameBoard gs) (nextMark gs)
 {-| Get the list of Cells that the current player must play into to prevent
 the opponent from winning in that Cell on their next turn.
 -}
-getBlockMoves :: GameState -> [Cell]
-getBlockMoves gs = filter (isBlockingMove gs) (emptyCells $ gameBoard gs)
+getBlockingMoves :: GameState -> [Cell]
+getBlockingMoves gs = filter (isBlockingMove gs) (emptyCells $ gameBoard gs)
 
 {-| Return True if playing into the given Cell would block the opponent from
 winning the game on their next turn.
