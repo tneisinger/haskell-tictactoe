@@ -15,6 +15,7 @@ module TicTacToe.Types
        , TicTacToeIO
 
          -- * Functions
+       , allDifficulties
        , liftTicTacToe
        , evalTicTacToe
        , execTicTacToe
@@ -95,7 +96,10 @@ data Player = Computer | Human
   deriving (Eq, Show)
 
 data Difficulty = Easy | Medium | Hard
-  deriving (Eq, Show)
+  deriving (Enum, Eq, Ord, Show)
+
+allDifficulties :: [Difficulty]
+allDifficulties = [Easy ..]
 
 -- | The State of a tic-tac-toe game.
 data GameState = GameState { stdGen :: StdGen

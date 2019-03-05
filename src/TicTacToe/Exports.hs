@@ -11,6 +11,7 @@ module TicTacToe.Exports
        , TicTacToeIO
 
          -- * Functions
+       , allDifficulties
        , checkForOutcome
        , doComputerMove
        , doHumanMove
@@ -40,5 +41,5 @@ import TicTacToe.Basic (checkForOutcome, doHumanMove, emptyCells,
 import TicTacToe.Types (Board, Cell(..), Difficulty(..), GameOutcome(..),
                         GameState(nextPlayer, computerMark, gameBoard),
                         Mark(..), Player(..), TicTacToe, TicTacToeIO,
-                        evalTicTacToe, evalTicTacToeIO, execTicTacToe,
-                        liftTicTacToe)
+                        allDifficulties, evalTicTacToe, evalTicTacToeIO,
+                        execTicTacToe, liftTicTacToe)
