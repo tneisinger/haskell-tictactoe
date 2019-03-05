@@ -176,20 +176,21 @@ type ChoiceTuple = ([Cell], GameState, Maybe (GameOutcome Player))
 type ChoiceTree = Tree ChoiceTuple
 
 makeChoiceTree :: ChoiceTuple -> Either (MoveError Player) ChoiceTree
-makeChoiceTree ct@(cells, gs, maybeOutcome)
+makeChoiceTree ct@(_, gs, maybeOutcome)
   | isJust maybeOutcome = pure $ Node ct []
   | otherwise = do
-      tuples <- traverse (makeChoiceTuple gs cells)
-                  (Just <$> getObviousMoves gs)
+      tuples <- traverse (advanceChoiceTuple ct) (getObviousMoves gs)
       choiceForest <- traverse makeChoiceTree tuples
       pure $ Node ct choiceForest
 
-makeChoiceTuple :: GameState
-                -> [Cell]
-                -> Maybe Cell
-                -> Either (MoveError Player) ChoiceTuple
-makeChoiceTuple gs cells Nothing = pure (cells, gs, checkForOutcome gs)
-makeChoiceTuple gs cells (Just cell) = do
+{-| Create a new ChoiceTuple by performing a move into the given Cell.
+The given cell gets appended to the list of Cells in the new ChoiceTuple,
+and a new GameState is created.
+-}
+advanceChoiceTuple :: ChoiceTuple
+                   -> Cell
+                   -> Either (MoveError Player) ChoiceTuple
+advanceChoiceTuple (cells, gs, _) cell = do
   gs' <- execStateT (performMove cell) gs
   predictedOutcome <- predictOutcome gs'
   pure (cells ++ [cell], gs', predictedOutcome)
