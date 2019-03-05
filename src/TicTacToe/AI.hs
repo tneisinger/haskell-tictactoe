@@ -194,17 +194,30 @@ makeChoiceTuple gs cells (Just cell) = do
   predictedOutcome <- predictOutcome gs'
   pure (cells ++ [cell], gs', predictedOutcome)
 
+{-| Try to predict the outcome of a game based on a GameState.  This function
+isn't very sophisticated.  If there are no obvious moves to be made (winning
+moves or blocking moves) this function will return Nothing.
+-}
 predictOutcome :: GameState
                -> Either (MoveError Player) (Maybe (GameOutcome Player))
 predictOutcome gs =
-  case (getWinningMoves gs, getBlockingMoves gs, checkGSForOutcome gs) of
-    (_, _, Just outcome) -> pure $ Just outcome
-    ([], [], _) -> pure Nothing
-    ([], _:(_:_), _) -> pure (Just $ Winner $ flipPlayer $ nextPlayer gs)
-    ([], [c], _) -> do
-      gs' <- execStateT (performMove c) gs
-      predictOutcome gs'
-    _ -> pure (Just $ Winner $ nextPlayer gs)
+    case (winMoveExists, numBlockMoves, checkGSForOutcome gs) of
+      (_, _, Just outcome) -> pure $ Just outcome
+      -- ^ If there is already an outcome, return it
+      (False, 0, _)        -> pure Nothing
+      -- ^ If there aren't any winning moves or blocking moves, return Nothing
+      (False, 1, _)        -> do let blockMove = head $ getBlockingMoves gs
+                                 gs' <- execStateT (performMove blockMove) gs
+                                 predictOutcome gs'
+      -- ^ If there is one blocking move, do that move and recurse.
+      (False, _, _)        -> pure $ Just $ Winner $ opponent
+      -- ^ If there are many moves that need blocked, current player has lost.
+      (True, _, _)         -> pure $ Just $ Winner $ currentPlayer
+      -- ^ If there are winning moves, current player has won.
+  where winMoveExists = length (getWinningMoves gs) > 0
+        numBlockMoves = length $ getBlockingMoves gs
+        currentPlayer = nextPlayer gs
+        opponent      = flipPlayer currentPlayer
 
 {-| Return a list of cells that it would be logical for the current
 player to play into.  If there are any moves that would allow the current
