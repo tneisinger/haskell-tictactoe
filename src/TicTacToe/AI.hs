@@ -179,7 +179,8 @@ makeChoiceTree :: ChoiceTuple -> Either (MoveError Player) ChoiceTree
 makeChoiceTree ct@(cells, gs, maybeOutcome)
   | isJust maybeOutcome = pure $ Node ct []
   | otherwise = do
-      tuples <- traverse (makeChoiceTuple gs cells) (Just <$> getSmartMoves gs)
+      tuples <- traverse (makeChoiceTuple gs cells)
+                  (Just <$> getObviousMoves gs)
       choiceForest <- traverse makeChoiceTree tuples
       pure $ Node ct choiceForest
 
@@ -190,23 +191,31 @@ makeChoiceTuple :: GameState
 makeChoiceTuple gs cells Nothing = pure (cells, gs, checkGSForOutcome gs)
 makeChoiceTuple gs cells (Just cell) = do
   gs' <- execStateT (performMove cell) gs
-  predictedOutcome <- getPredictedOutcome gs'
+  predictedOutcome <- predictOutcome gs'
   pure (cells ++ [cell], gs', predictedOutcome)
 
-getPredictedOutcome :: GameState
-                    -> Either (MoveError Player) (Maybe (GameOutcome Player))
-getPredictedOutcome gs =
+predictOutcome :: GameState
+               -> Either (MoveError Player) (Maybe (GameOutcome Player))
+predictOutcome gs =
   case (getWinningMoves gs, getBlockingMoves gs, checkGSForOutcome gs) of
     (_, _, Just outcome) -> pure $ Just outcome
     ([], [], _) -> pure Nothing
     ([], _:(_:_), _) -> pure (Just $ Winner $ flipPlayer $ nextPlayer gs)
     ([], [c], _) -> do
       gs' <- execStateT (performMove c) gs
-      getPredictedOutcome gs'
+      predictOutcome gs'
     _ -> pure (Just $ Winner $ nextPlayer gs)
 
-getSmartMoves :: GameState -> [Cell]
-getSmartMoves gs =
+{-| Return a list of cells that it would be logical for the current
+player to play into.  If there are any moves that would allow the current
+player to win the game, return those cells.  If there are no cells that would
+allow the current player to win the game, but there are cells that the current
+player needs to play into to prevent the opponent from winning, return those
+blocking cells.  If there are no winning cells or blocking cells, just return
+the list of empty cells.
+-}
+getObviousMoves :: GameState -> [Cell]
+getObviousMoves gs =
   case (getWinningMoves gs, getBlockingMoves gs) of
     ([], [])          -> emptyCells $ gameBoard gs
     -- ^ if no winning moves and no blocking moves, return all available moves
