@@ -1,5 +1,5 @@
 module TicTacToe.Basic
-       ( checkGSForOutcome
+       ( checkForOutcome
        , doHumanMove
        , emptyCells
        , fillCell
@@ -227,8 +227,8 @@ getPlayer gs mark = if computerMark gs == mark then Computer else Human
 {-| Given a Board, maybe return a GameOutcome Mark. If Nothing is returned,
 that means that the game hasn't finished yet.
 -}
-checkForOutcome :: Board -> Maybe (GameOutcome Mark)
-checkForOutcome board =
+checkBoardForOutcome :: Board -> Maybe (GameOutcome Mark)
+checkBoardForOutcome board =
   case filter isJust $ map (checkLineForWinner board) [Line00to02 ..] of
     (Just winnerMark:_) -> Just (Winner winnerMark)
     [] -> if length (Map.toList board) == 9
@@ -241,9 +241,9 @@ finished yet, return `Nothing`.  If the game is finished and it is a draw,
 return `Just Draw`.  If the Human won the game, return `Just (Winner Human)`.
 If the Computer won the game, return `Just (Winner Computer)`
 -}
-checkGSForOutcome :: GameState -> Maybe (GameOutcome Player)
-checkGSForOutcome gs =
-  case checkForOutcome (gameBoard gs) of
+checkForOutcome :: GameState -> Maybe (GameOutcome Player)
+checkForOutcome gs =
+  case checkBoardForOutcome (gameBoard gs) of
     Nothing            -> Nothing
     Just Draw          -> Just Draw
     Just (Winner mark) -> if mark == computerMark gs
@@ -303,7 +303,7 @@ given Cell, or will return an error message.
 performMove :: Cell -> TicTacToe ()
 performMove cell = do
   gs <- get
-  case checkGSForOutcome gs of
+  case checkForOutcome gs of
     Just outcome -> lift $ Left (GameOver outcome)
     Nothing -> do
       let np = nextPlayer gs

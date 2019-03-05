@@ -12,7 +12,7 @@ import Data.Tree (flatten, Tree(..))
 import Numeric.MathFunctions.Comparison (eqRelErr)
 import System.Random (randomR)
 
-import TicTacToe.Basic (checkGSForOutcome, flipPlayer, flipMark, nextMark,
+import TicTacToe.Basic (checkForOutcome, flipPlayer, flipMark, nextMark,
                         getAllLineMarks, emptyCells, performMove)
 import TicTacToe.Types (Board, Cell, Player(..), GameState(..), Mark,
                         GameOutcome(..), MoveError, Cell(..), TicTacToe,
@@ -188,7 +188,7 @@ makeChoiceTuple :: GameState
                 -> [Cell]
                 -> Maybe Cell
                 -> Either (MoveError Player) ChoiceTuple
-makeChoiceTuple gs cells Nothing = pure (cells, gs, checkGSForOutcome gs)
+makeChoiceTuple gs cells Nothing = pure (cells, gs, checkForOutcome gs)
 makeChoiceTuple gs cells (Just cell) = do
   gs' <- execStateT (performMove cell) gs
   predictedOutcome <- predictOutcome gs'
@@ -201,7 +201,7 @@ moves or blocking moves) this function will return Nothing.
 predictOutcome :: GameState
                -> Either (MoveError Player) (Maybe (GameOutcome Player))
 predictOutcome gs =
-    case (winMoveExists, numBlockMoves, checkGSForOutcome gs) of
+    case (winMoveExists, numBlockMoves, checkForOutcome gs) of
       (_, _, Just outcome) -> pure $ Just outcome
       -- ^ If there is already an outcome, return it
       (False, 0, _)        -> pure Nothing

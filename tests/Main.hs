@@ -74,48 +74,48 @@ main = hspec $ do
        in forAll (arbitrary :: Gen Int) $ \n ->
          makeSampleGS X n moves `shouldSatisfy` isLeft
 
-  describe "checkGSForOutcome" $ do
+  describe "checkForOutcome" $ do
     it "gives Nothing if the game isn't over yet" $
       forAll (arbitrary :: Gen Int) $ \n ->
-        checkGSForOutcome <$> makeSampleGS X n [Cell00, Cell22, Cell11]
+        checkForOutcome <$> makeSampleGS X n [Cell00, Cell22, Cell11]
           `shouldSatisfy` hasOutcome Nothing
     it "gives (Just Draw) if all the cells are full and nobody won" $
       let moves = [Cell00, Cell22, Cell11, Cell02, Cell12, Cell10, Cell21,
                    Cell01, Cell20]
        in forAll (arbitrary :: Gen Int) $ \n ->
-         checkGSForOutcome <$> makeSampleGS X n moves `shouldSatisfy`
+         checkForOutcome <$> makeSampleGS X n moves `shouldSatisfy`
             hasOutcome (Just Draw)
     it "gives (Just (Winner Human)) if Human wins as X" $
       let moves = [Cell00, Cell22, Cell01, Cell12, Cell02]
        in forAll (arbitrary :: Gen Int) $ \n ->
-         checkGSForOutcome <$> makeSampleGS X n moves `shouldSatisfy`
+         checkForOutcome <$> makeSampleGS X n moves `shouldSatisfy`
             hasOutcome (Just (Winner Human))
     it "gives (Just (Winner Human)) if Human wins as O" $
       let moves = [Cell01, Cell22, Cell21, Cell11, Cell02, Cell00]
        in forAll (arbitrary :: Gen Int) $ \n ->
-         checkGSForOutcome <$> makeSampleGS O n moves `shouldSatisfy`
+         checkForOutcome <$> makeSampleGS O n moves `shouldSatisfy`
             hasOutcome (Just (Winner Human))
     it "gives (Just (Winner Computer)) if Computer wins as X" $
       let moves = [Cell00, Cell22, Cell01, Cell12, Cell02]
        in forAll (arbitrary :: Gen Int) $ \n ->
-         checkGSForOutcome <$> makeSampleGS O n moves `shouldSatisfy`
+         checkForOutcome <$> makeSampleGS O n moves `shouldSatisfy`
             hasOutcome (Just (Winner Computer))
     it "gives (Just (Winner Computer)) if Computer wins as O" $
       let moves = [Cell01, Cell22, Cell21, Cell11, Cell02, Cell00]
        in forAll (arbitrary :: Gen Int) $ \n ->
-         checkGSForOutcome <$> makeSampleGS X n moves `shouldSatisfy`
+         checkForOutcome <$> makeSampleGS X n moves `shouldSatisfy`
            hasOutcome (Just (Winner Computer))
     it "gives (Just (Winner Computer)) if Computer wins on full board" $
       let moves = [Cell01, Cell22, Cell21, Cell11, Cell02, Cell12, Cell10,
                    Cell20, Cell00]
        in forAll (arbitrary :: Gen Int) $ \n ->
-         checkGSForOutcome <$> makeSampleGS O n moves `shouldSatisfy`
+         checkForOutcome <$> makeSampleGS O n moves `shouldSatisfy`
            hasOutcome (Just (Winner Computer))
     it "gives (Just (Winner Human)) if Human wins on full board" $
       let moves = [Cell01, Cell22, Cell21, Cell11, Cell02, Cell12, Cell10,
                    Cell20, Cell00]
        in forAll (arbitrary :: Gen Int) $ \n ->
-         checkGSForOutcome <$> makeSampleGS X n moves `shouldSatisfy`
+         checkForOutcome <$> makeSampleGS X n moves `shouldSatisfy`
            hasOutcome (Just (Winner Human))
 
   describe "doComputerMove" $ do
@@ -242,7 +242,7 @@ rightsOnly = foldr go []
         go (Left _) result = result
 
 
--- For checkGSForOutcome
+-- For checkForOutcome
 
 hasOutcome :: Eq a => Maybe a -> Either b (Maybe a) -> Bool
 hasOutcome _ (Left _) = False

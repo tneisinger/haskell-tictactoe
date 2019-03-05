@@ -6,7 +6,7 @@ import System.IO (hFlush, stdout)
 
 import TicTacToe.Exports (Cell, GameOutcome(..),
                           GameState(gameBoard, nextPlayer), GameOutcome(..),
-                          Mark, Player(..), TicTacToeIO, checkGSForOutcome,
+                          Mark, Player(..), TicTacToeIO, checkForOutcome,
                           doComputerMove, doHumanMove, emptyCells,
                           evalTicTacToeIO, humanMark, initGameState,
                           liftTicTacToe, maybeIntToCell, showBoard,
@@ -27,7 +27,7 @@ main = do
 textGameLoop :: TicTacToeIO ()
 textGameLoop = do
   gs <- get
-  case (checkGSForOutcome gs, nextPlayer gs) of
+  case (checkForOutcome gs, nextPlayer gs) of
     (Just _, _)         -> liftIO $
       printGameMessage gs >> putStrLn (showBoard (gameBoard gs))
     (Nothing, Computer) -> liftTicTacToe doComputerMove >> textGameLoop
@@ -78,7 +78,7 @@ maybeReadToCell intStr =
 -- | Print the GameState to the screen in a convenient way.
 printGameMessage :: GameState -> IO ()
 printGameMessage gs =
-  case checkGSForOutcome gs of
+  case checkForOutcome gs of
     Nothing -> putStrLn $ "It is your turn.  You are " ++ show (humanMark gs)
     Just (Winner winner) -> putStrLn $ show winner ++ " wins!"
     Just Draw -> putStrLn "Draw! Nobody wins :("

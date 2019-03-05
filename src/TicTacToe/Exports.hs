@@ -10,7 +10,7 @@ module TicTacToe.Exports
        , TicTacToeIO
 
          -- * Functions
-       , checkGSForOutcome
+       , checkForOutcome
        , doComputerMove
        , doHumanMove
        , emptyCells
@@ -31,7 +31,7 @@ module TicTacToe.Exports
        ) where
 
 import TicTacToe.AI (doComputerMove)
-import TicTacToe.Basic (checkGSForOutcome, doHumanMove, emptyCells,
+import TicTacToe.Basic (checkForOutcome, doHumanMove, emptyCells,
                         getWinningCells, getWinningLines, humanMark,
                         initGameState, makeSampleGS, maybeIntToCell,
                         newGameState, showBoard, showBoardWithCellNums,
